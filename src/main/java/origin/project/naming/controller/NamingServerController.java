@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.naming.repository.NamingRepository;
 import origin.project.naming.server.NamingServer;
+import origin.project.naming.service.Hasher;
 
 import javax.swing.text.html.Option;
 import java.util.Optional;
@@ -28,7 +29,9 @@ public class NamingServerController {
     }
 
     @GetMapping("/get-node")
-    public Optional<String> getNode(@RequestParam("hashValue") int hashValue) {
+    public Optional<String> getNode(@RequestParam("name") String name) {
+        //call hasher!!!
+        int hashValue = Hasher.hashFileName(name);
         Optional<String> ip = namingRepository.findById(hashValue);
         if(ip.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
