@@ -11,9 +11,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 @Setter
 
 @Component
-public class NamingMap extends HashMap<Integer,String>{}
+public class NamingMap extends ConcurrentHashMap<Integer,String>{} //???
