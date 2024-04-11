@@ -12,13 +12,10 @@ import java.util.Objects;
 
 public class NamingServerClient {
     private String serverBaseUrl;
-    private String emailClient;
-
-    private int clientId;
 
     public NamingServerClient(String hostnameServer, int portServer) {
         // base-url of server. e.g., localhost:8080
-        this.serverBaseUrl = "http://" + hostnameServer + ":" + portServer;
+        this.serverBaseUrl = "http://" + hostnameServer + ":" + portServer + "/namingServer";
 
         run();
     }
@@ -26,25 +23,25 @@ public class NamingServerClient {
     private void run() {
 
         // Add some nodes
-        System.out.print(addNode("node1", "192.168.1.1"));
-        System.out.print(addNode("node2", "192.168.1.2"));
-        System.out.print(addNode("node3", "192.168.1.3"));
-        System.out.print(addNode("node4", "192.168.1.4"));
+        System.out.println(addNode("node1", "192.168.1.1"));
+        System.out.println(addNode("node2", "192.168.1.2"));
+        System.out.println(addNode("node3", "192.168.1.3"));
+        System.out.println(addNode("node4", "192.168.1.4"));
 
         // print all the nodes
-        System.out.print(getAllNodes());
+        System.out.println(getAllNodes());
 
         // remove some nodes
-        System.out.print(removeNode("192.168.1.4"));
+        System.out.println(removeNode("192.168.1.4"));
 
         // print all the nodes
-        System.out.print(getAllNodes());
+        System.out.println(getAllNodes());
 
         // get a loction fo a file
-        System.out.print(getFileLocation("document1.txt"));
+        System.out.println(getFileLocation("document1.txt"));
 
         // clear the repository
-        System.out.print(clearRepository());
+        System.out.println(clearRepository());
 
     }
 
@@ -90,6 +87,8 @@ public class NamingServerClient {
     //https://www.baeldung.com/java-http-request
     private String getRequest(String endpoint, String requestbody, String request) {
         try {
+            String output;
+
             URL url = new URL(endpoint);
 //            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -117,22 +116,24 @@ public class NamingServerClient {
                 }
                 reader.close();
                 //
-                return response.toString();
+                output = response.toString();
             } else {
                 // If the request was not successful, handle the error accordingly
-                System.out.println("Failed to " + request + ". HTTP Error: " + connection.getResponseCode());
+                output = "Failed to " + request + ". HTTP Error: " + connection.getResponseCode();
             }
             connection.disconnect();
+            return output;
         } catch (IOException e) {
             // Handling network-related errors
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return null;
     }
 
     private String postRequest(String endpoint, String requestbody, String request) {
 
         try {
+            String output;
+
             URL url = new URL(endpoint);
 //            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -158,14 +159,14 @@ public class NamingServerClient {
                     response.append(line);
                 }
                 reader.close();
-                return response.toString();
+                output = response.toString();
             }
             else {
                 // If the request was not successful, handle the error accordingly
-                System.out.println("Failed to " + request + ". HTTP Error: " + connection.getResponseCode());
+                output = "Failed to " + request + ". HTTP Error: " + connection.getResponseCode();
             }
             connection.disconnect();
-            return null;
+            return output;
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -174,6 +175,8 @@ public class NamingServerClient {
     private String deleteRequest(String endpoint, String requestbody, String request) {
 
         try {
+            String output;
+
             URL url = new URL(endpoint);
 //            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -199,14 +202,14 @@ public class NamingServerClient {
                     response.append(line);
                 }
                 reader.close();
-                return response.toString();
+                output = response.toString();
             }
             else {
                 // If the request was not successful, handle the error accordingly
-                System.out.println("Failed to " + request + ". HTTP Error: " + connection.getResponseCode());
+                output = "Failed to " + request + ". HTTP Error: " + connection.getResponseCode();
             }
             connection.disconnect();
-            return null;
+            return output;
         }
         catch (IOException e) {
             throw new RuntimeException(e);
