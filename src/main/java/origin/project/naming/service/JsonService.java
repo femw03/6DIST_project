@@ -32,6 +32,9 @@ public class JsonService {
             reader.close();
 
             // Convert array to list
+            if (objects == null)
+                return null;
+
             return List.of(objects);
             // Convert array to list
         } catch (IOException e) {
@@ -47,8 +50,13 @@ public class JsonService {
             Gson gson = new Gson();
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
 
-            // append new entry
-            List<NamingEntry> originalList = new ArrayList<>(List.of(objects));
+            List<NamingEntry> originalList = new ArrayList<>();
+
+            if (objects != null) {
+                // append new entry
+                originalList = new ArrayList<>(List.of(objects));
+
+            }
             originalList.add(entry);
 
             // write new list to file

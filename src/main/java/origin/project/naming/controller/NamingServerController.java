@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 @RequestMapping("/naming-server")
 public class NamingServerController {
 
-    private static final String FILE_PATH = "src/main/java/origin/project/naming/service/nodes.json";
+    private static final String FILE_PATH = "resources/nodes.json";
 
     @Autowired
     private NamingRepository namingRepository;

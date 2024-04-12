@@ -3,7 +3,14 @@ package origin.project.naming.service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import origin.project.naming.model.naming.NamingEntry;
 import origin.project.naming.repository.NamingRepository;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
 @Service
 public class DatabaseLoader {
     @Autowired
@@ -12,7 +19,8 @@ public class DatabaseLoader {
     @Autowired
     final private JsonService jsonService;
 
-    private static final String FILE_PATH = "src/main/java/origin/project/naming/service/nodes.json";
+    private static final String nodesFilePath = "resources/nodes.json";
+    private static final String resourcesFolderPath = "resources";
 
     public DatabaseLoader(NamingRepository namingRepository, JsonService jsonService) {
         this.namingRepository = namingRepository;
@@ -21,7 +29,29 @@ public class DatabaseLoader {
 
     @PostConstruct
     private void initDatabase() {
-        namingRepository.saveAll(jsonService.loadNamingEntriesFromJsonFile(FILE_PATH));
+        try {
+            Path path = Path.of(nodesFilePath);
+            if (Files.exists(path)) {
+                List<NamingEntry> entries = jsonService.loadNamingEntriesFromJsonFile(nodesFilePath);
+                if (entries != null) {
+                    namingRepository.saveAll(entries);
+                }
+            }
+            else {
+                Path dir = Path.of(resourcesFolderPath);
+                if (Files.exists(dir)) {
+                    Files.createFile(path);
+                }
+                else {
+                   Files.createDirectory(dir);
+                    Files.createFile(path);
+                }
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
 
 //        NamingEntry localhost = new NamingEntry(1300, "localhost");
