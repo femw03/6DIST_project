@@ -1,107 +1,105 @@
 package origin.project.client;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
 
 public class NamingServerClient {
     private String serverBaseUrl;
 
     public NamingServerClient(String hostnameServer, int portServer) {
         // base-url of server. e.g., localhost:8080
-        this.serverBaseUrl = "http://" + hostnameServer + ":" + portServer + "/namingServer";
+        this.serverBaseUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
 
         run();
     }
 
     private void run() {
-
-        // Add some nodes
-        System.out.println(addNode("node1", "192.168.1.1"));
-        System.out.println(addNode("node2", "192.168.1.2"));
-        System.out.println(addNode("node3", "192.168.1.3"));
-        System.out.println(addNode("node4", "192.168.1.4"));
-
         // print all the nodes
         System.out.println(getAllNodes());
 
-        // remove some nodes
-        System.out.println(removeNode("192.168.1.4"));
-
+        // Add nodes
+        System.out.println(addNode("node2", "192.168.1.71"));
+        System.out.println(addNode("node4", "192.168.1.51"));
+        int hashNode = addNode("node6", "192.168.1.21");
+        System.out.println(hashNode);
+//
         // print all the nodes
         System.out.println(getAllNodes());
 
         // get a loction fo a file
         System.out.println(getFileLocation("document1.txt"));
 
-        // clear the repository
-        System.out.println(clearRepository());
+        // remove some nodes
+        removeNodeThroughName("192.168.1.71", "node2");
+        removeNodeThroughName("192.168.1.51", "node4");
+        removeNodeThroughHash("192.168.1.21", String.valueOf(4724));
+
+        System.out.println(getAllNodes());
+//
+//        // print all the nodes
+//        System.out.println(getAllNodes());
+//
+//
+//
+//        // clear the repository
+//        System.out.println(clearRepository());
 
     }
 
 
-    private String addNode(String nodeName, String ipAddress) {
-        String nodeEndpoint = serverBaseUrl + "/addNode";
-        String nodeBody = "{\"nodeName\" : \"" + nodeName + "\", \"ipAddress\" : \"" + ipAddress + "\"}" ;
-        return postRequest(nodeEndpoint, nodeBody, "addNode");
+    private int addNode(String nodeName, String ipAddress) {
+        String addNodeEndpoint = serverBaseUrl + "/add-node";
+        String addNodeBody = "{\"name\" : \"" + nodeName + "\", \"ip\" : \"" + ipAddress + "\"}" ;
+        return Integer.parseInt(postRequest(addNodeEndpoint, addNodeBody, "addNode"));
     }
 
-    private String removeNode(String ipAddress) {
-        String nodeEndpoint = serverBaseUrl + "/removeNode";
-        String nodeBody = "{\"ipAddress\" : \"" + ipAddress + "\"}" ;
-        return postRequest(nodeEndpoint, nodeBody, "removeNode");
+    private void removeNodeThroughName(String ipAddress, String name) {
+        String nodeEndpoint = serverBaseUrl + "/remove-node";
+        String nodeBody = "{\"name\" : \"" + name + "\", \"ip\" : \"" + ipAddress + "\"}" ;
+        deleteRequest(nodeEndpoint, nodeBody, "removeNode");
     }
 
-    private String getNode(String ipAddress) {
-        String nodeEndpoint = serverBaseUrl + "/getNode";
-        String nodeBody = "{\"ipAddress\" : \"" + ipAddress + "\"}" ;
-        return getRequest(nodeEndpoint, nodeBody, "getNode");
+    private void removeNodeThroughHash(String ipAddress, String hash) {
+        String nodeEndpoint = serverBaseUrl + "/remove-node";
+        String nodeBody = "{\"hash\" : \"" + hash + "\", \"ip\" : \"" + ipAddress + "\"}" ;
+        deleteRequest(nodeEndpoint, nodeBody, "removeNode");
     }
+
+//    private String getNode(String ipAddress) {
+//        String nodeEndpoint = serverBaseUrl + "/getNode";
+//        String nodeBody = "{\"ipAddress\" : \"" + ipAddress + "\"}" ;
+//        return getRequest(nodeEndpoint, "get node" + ipAddress);
+//    }
 
 
     private String getAllNodes() {
-        String nodeEndpoint = serverBaseUrl + "/getAllNodes";
-        String nodeBody = "{}" ;
-        return getRequest(nodeEndpoint, nodeBody, "getAllNodes");
+        String nodeEndpoint = serverBaseUrl + "/all-nodes";
+        return getRequest(nodeEndpoint, "get all nodes");
     }
 
     private String getFileLocation(String fileName) {
-        String nodeEndpoint = serverBaseUrl + "/getFileLocation";
-        String nodeBody = "{\"fileName\" : \"" + fileName + "\"}" ;
-        return getRequest(nodeEndpoint, nodeBody, "getFileLocation");
+        String nodeEndpoint = serverBaseUrl + "/file-location/" + fileName;
+        return getRequest(nodeEndpoint, "get file location" + fileName);
     }
 
-    private String clearRepository() {
-        String nodeEndpoint = serverBaseUrl + "/clearRepository";
-        String nodeBody = "{}" ;
-        return deleteRequest(nodeEndpoint, nodeBody, "clearRepository");
-    }
+//    private String clearRepository() {
+//        String nodeEndpoint = serverBaseUrl + "/clearRepository";
+//        String nodeBody = "{}" ;
+//        return deleteRequest(nodeEndpoint, nodeBody, "clearRepository");
+//    }
 
 
     //https://www.baeldung.com/java-http-request
-    private String getRequest(String endpoint, String requestbody, String request) {
+    private String getRequest(String endpoint, String request) {
         try {
-            String output;
-
             URL url = new URL(endpoint);
-//            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
-
-            // Try writing the email to JSON
-            try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
-                byte[] requestBody = requestbody.getBytes(StandardCharsets.UTF_8);
-                outputStream.write(requestBody, 0, requestBody.length);
-            }
-
 
             // If the request successful (status code 200), we can read response.
             if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -116,17 +114,17 @@ public class NamingServerClient {
                 }
                 reader.close();
                 //
-                output = response.toString();
+                return response.toString();
             } else {
                 // If the request was not successful, handle the error accordingly
-                output = "Failed to " + request + ". HTTP Error: " + connection.getResponseCode();
+                System.out.println(request + "failed" + connection.getResponseCode());
             }
             connection.disconnect();
-            return output;
         } catch (IOException e) {
             // Handling network-related errors
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
+        return null;
     }
 
     private String postRequest(String endpoint, String requestbody, String request) {
