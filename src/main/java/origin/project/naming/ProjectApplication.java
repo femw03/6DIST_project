@@ -1,4 +1,4 @@
-package origin.project;
+package origin.project.naming;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
