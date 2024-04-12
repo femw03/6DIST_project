@@ -1,7 +1,7 @@
-package origin.project.naming.service;
+package origin.project.server.service;
 
 import org.springframework.stereotype.Service;
-import origin.project.naming.model.naming.NamingEntry;
+import origin.project.server.model.naming.NamingEntry;
 
 import java.util.ArrayList;
 import java.util.Map;

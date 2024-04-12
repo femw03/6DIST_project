@@ -1,16 +1,17 @@
-package origin.project.naming.controller;
+package origin.project.server.controller;
 
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import origin.project.naming.model.naming.NamingEntry;
-import origin.project.naming.model.naming.dto.NodeRequest;
-import origin.project.naming.repository.NamingRepository;
-import origin.project.naming.service.JsonService;
-import origin.project.naming.service.NamingService;
+import origin.project.server.model.naming.NamingEntry;
+import origin.project.server.model.naming.dto.NodeRequest;
+import origin.project.server.repository.NamingRepository;
+import origin.project.server.service.JsonService;
+import origin.project.server.service.NamingService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,7 @@ import java.util.logging.Logger;
 @RequestMapping("/naming-server")
 public class NamingServerController {
 
-    private static final String FILE_PATH = "src/main/java/origin/project/naming/service/nodes.json";
+    private static final String FILE_PATH = "src/main/java/origin/project/server/service/nodes.json";
 
     @Autowired
     private NamingRepository namingRepository;
@@ -68,7 +69,7 @@ public class NamingServerController {
         }
 
         NamingEntry namingEntry = new NamingEntry(hash, ipAddress);
-        System.out.println(namingEntry.getIP());
+        //System.out.println(namingEntry.getIP());
         jsonService.addEntryToJsonFile(FILE_PATH, namingEntry);
         namingRepository.save(namingEntry);
         return hash;
@@ -107,12 +108,23 @@ public class NamingServerController {
         }
     }
 
-    @GetMapping("/get-node/{hashValue}")
+    @GetMapping("/get-node-by-hash/{hashValue}")
     public Optional<NamingEntry> getNode(@PathVariable("hashValue") int hashValue) {
         logger.info("GET: /get-node/"+ hashValue);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
         if(optionalEntry.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
+        }
+        return optionalEntry;
+    }
+
+    @GetMapping("/get-node-by-name/{name}")
+    public Optional<NamingEntry> getNode(@PathVariable("name") String name) {
+        logger.info("GET: /get-node/"+ name);
+        int hashValue = namingService.hashingFunction(name);
+        Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
+        if(optionalEntry.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Name not found!");
         }
         return optionalEntry;
     }
@@ -150,16 +162,18 @@ public class NamingServerController {
 
     }
 
-//    @ResponseStatus(HttpStatus.BAD_REQUEST)
-//    @ExceptionHandler(MethodArgumentNotValidException.class)
-//    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
-//        Map<String, String> errors = new HashMap<>();
-//        ex.getBindingResult().getAllErrors().forEach((error) -> {
-//            String fieldName = ((FieldError) error).getField();
-//            String errorMessage = error.getDefaultMessage();
-//            errors.put(fieldName, errorMessage);
-//        });
-//        return errors;
-//    }
-}
+    @DeleteMapping("/clear")
+    public ResponseEntity<String> clearRepository() {
+        try {
+            namingRepository.deleteAll();
+            jsonService.clearJsonFile(FILE_PATH);
+            return ResponseEntity.ok("Cleared successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
+
+
+
+}

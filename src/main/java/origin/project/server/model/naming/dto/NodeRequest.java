@@ -1,4 +1,4 @@
-package origin.project.naming.model.naming.dto;
+package origin.project.server.model.naming.dto;
 
 import lombok.Getter;
 import lombok.Setter;

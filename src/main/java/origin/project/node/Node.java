@@ -1,11 +1,7 @@
-package origin.project.naming.node;
+package origin.project.node;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-import origin.project.naming.service.NamingService;
 
 @Getter
 @Setter
