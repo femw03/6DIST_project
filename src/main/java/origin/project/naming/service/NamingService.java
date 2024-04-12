@@ -1,10 +1,14 @@
 package origin.project.naming.service;
 
+import org.springframework.stereotype.Service;
+import origin.project.naming.model.naming.NamingEntry;
+
 import java.util.ArrayList;
 import java.util.Map;
 
+@Service
 public class NamingService {
-    public static int hashingFunction(String name) {
+    public int hashingFunction(String name) {
         // Hash code given in ppt, but nodes with almost same name got same hash
         /*double max = 2147483647.0;
         double min = -2147483647.0;
@@ -19,30 +23,21 @@ public class NamingService {
         return hash;
     }
 
-    public static int findNearestNodeId(Integer fileHash, ArrayList<Integer> nodesWithHashSmallerThanFile) {
-        int minDifference = Integer.MAX_VALUE;
-        int nearestNodeId = -1;
+    public NamingEntry findNearestNodeId(Integer fileHash, ArrayList<NamingEntry> nodesWithHashSmallerThanFile) {
+        NamingEntry bestNode = nodesWithHashSmallerThanFile.get(0);
+//        System.out.println("firstBestNode in findNearest :" + bestNode.getIP() + " " + bestNode.getHash());
+        int minDifference = fileHash - bestNode.getHash();
+//        System.out.println("minDifference firstBestNode :" + minDifference);
 
-        for (Integer nodeId : nodesWithHashSmallerThanFile) {
-            int difference = fileHash - nodeId;
+        for (NamingEntry node : nodesWithHashSmallerThanFile) {
+//            System.out.println("nextNode in findNearest :" + node.getIP() + " " + node.getHash());
+            int difference = fileHash - node.getHash();
+//            System.out.println("nextDifference in findNearest : " + difference);
             if (difference < minDifference) {
                 minDifference = difference;
-                nearestNodeId = nodeId;
+                bestNode = node;
             }
         }
-        return nearestNodeId;
-    }
-
-    public static int findBiggestNodeHash(Map<Integer, String> nodeMap) {
-        int maxHash = Integer.MIN_VALUE;
-        int biggestNodeHashId = -1;
-
-        for (Integer nodeId : nodeMap.keySet()) {
-            if (nodeId > maxHash) {
-                maxHash = nodeId;
-                biggestNodeHashId = nodeId;
-            }
-        }
-        return biggestNodeHashId;
+        return bestNode;
     }
 }
