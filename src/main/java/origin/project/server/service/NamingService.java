@@ -4,7 +4,6 @@ import org.springframework.stereotype.Service;
 import origin.project.server.model.naming.NamingEntry;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 @Service
 public class NamingService {

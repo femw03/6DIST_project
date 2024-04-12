@@ -28,14 +28,13 @@ public class JsonService {
 
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
 
-            if (objects == null) {
-                return Collections.emptyList(); // Return an empty list if the array is null
-            }
-
             // Close the reader
             reader.close();
 
             // Convert array to list
+            if (objects == null)
+                return null;
+
             return List.of(objects);
 
         } catch (IOException e) {
@@ -51,13 +50,13 @@ public class JsonService {
             Gson gson = new Gson();
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
 
-            // check if objects array is null or empty
-            if (objects == null) {
-                objects = new NamingEntry[0];   // initialize empty array
-            }
-
             // append new entry
-            List<NamingEntry> originalList = new ArrayList<>(List.of(objects));
+            List<NamingEntry> originalList = new ArrayList<>();
+            if (objects != null) {
+                // append new entry
+                originalList = new ArrayList<>(List.of(objects));
+
+            }
             originalList.add(entry);
 
             // write new list to file
@@ -78,11 +77,6 @@ public class JsonService {
             FileReader reader = new FileReader(filePath);
             Gson gson = new Gson();
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
-
-            // check if objects array is null or empty
-            if (objects == null) {
-                objects = new NamingEntry[0];   // initialize empty array
-            }
 
             // remove entry
             List<NamingEntry> originalList = new ArrayList<>(List.of(objects));

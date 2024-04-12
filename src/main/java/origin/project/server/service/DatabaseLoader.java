@@ -3,10 +3,14 @@ package origin.project.server.service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.repository.NamingRepository;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.logging.Logger;
 
 @Service
@@ -17,7 +21,8 @@ public class DatabaseLoader {
     @Autowired
     private JsonService jsonService;
 
-    private static final String FILE_PATH = "src/main/java/origin/project/server/service/nodes.json";
+    private static final String FILE_PATH = "src/main/resources/nodes.json";
+    private static final String DIRECTORY = "src/main/resources";
     private static final Logger logger = Logger.getLogger(DatabaseLoader.class.getName());
 
 
@@ -28,20 +33,31 @@ public class DatabaseLoader {
 
     @PostConstruct
     private void initDatabase() {
-        File file = new File(FILE_PATH);
-        if (file.exists()) {
-            namingRepository.saveAll(jsonService.loadNamingEntriesFromJsonFile(FILE_PATH));
-            logger.info("Loaded naming entries from JSON file.");
-        } else {
-            try {
-                if (file.createNewFile()) {
-                    logger.info("Created new JSON file.");
-                } else {
-                    logger.warning("Failed to create JSON file.");
+        try {
+            Path path = Path.of(FILE_PATH);
+            if (Files.exists(path)) {
+                List<NamingEntry> entries = jsonService.loadNamingEntriesFromJsonFile(FILE_PATH);
+                if (entries != null) {
+                    namingRepository.saveAll(entries);
+                    logger.info("Loaded naming entries from JSON file.");
                 }
-            } catch (IOException e) {
-                logger.severe("Error creating JSON file: " + e.getMessage());
             }
+            else {
+                Path dir = Path.of(DIRECTORY);
+                if (Files.exists(dir)) {
+                    Files.createFile(path);
+                    logger.info("Created new JSON file.");
+                }
+                else {
+                    Files.createDirectory(dir);
+                    Files.createFile(path);
+                    logger.info("Created right directory and JSON file.");
+                }
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            logger.severe("Error opening JSON file: " + e.getMessage());
         }
     }
 }

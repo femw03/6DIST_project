@@ -25,18 +25,15 @@ import java.util.logging.Logger;
 @RestController
 @RequestMapping("/naming-server")
 public class NamingServerController {
-
-    private static final String FILE_PATH = "src/main/java/origin/project/server/service/nodes.json";
-
     @Autowired
     private NamingRepository namingRepository;
-
-    Logger logger = Logger.getLogger(NamingServerController.class.getName());
-
     @Autowired
     private NamingService namingService;
     @Autowired
     private JsonService jsonService;
+    Logger logger = Logger.getLogger(NamingServerController.class.getName());
+    private static final String FILE_PATH = "src/main/resources/nodes.json";
+
 
     @GetMapping("/all-nodes")
     public Iterable<NamingEntry> getNamingEntries() {
@@ -47,7 +44,7 @@ public class NamingServerController {
                 .toList();
     }
     @PostMapping("/add-node")
-    public int addNode(@RequestBody NodeRequest nodeReq) {
+    public ResponseEntity<String> addNode(@RequestBody NodeRequest nodeReq) {
         logger.info("POST: /add-node/"+ nodeReq.toString());
         String name = nodeReq.getName();
         String ipAddress = nodeReq.getIp();
@@ -72,11 +69,11 @@ public class NamingServerController {
         //System.out.println(namingEntry.getIP());
         jsonService.addEntryToJsonFile(FILE_PATH, namingEntry);
         namingRepository.save(namingEntry);
-        return hash;
+        return ResponseEntity.ok("Node with hashID "+ hash + " successfully created!");
     }
 
     @DeleteMapping("/remove-node")
-    public void removeNode(@RequestBody NodeRequest nodeRequest) {
+    public ResponseEntity<String> removeNode(@RequestBody NodeRequest nodeRequest) {
         logger.info("DELETE: /node/" + nodeRequest.toString());
         String ipAddress = nodeRequest.getIp();
         String name = nodeRequest.getName();
@@ -106,6 +103,7 @@ public class NamingServerController {
         else{
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ERROR : No node with given name.");
         }
+        return ResponseEntity.ok("Node with hashID "+ hash + " successfully removed!");
     }
 
     @GetMapping("/get-node-by-hash/{hashValue}")
@@ -173,7 +171,14 @@ public class NamingServerController {
         }
     }
 
+    @GetMapping("/get-hash/{name}")
+    public int getHashID(@PathVariable("name") String name) {
+        return namingService.hashingFunction(name);
+    }
 
-
+    @PostMapping
+    public ResponseEntity<String> respondToMulticast(@RequestBody int existingNodes) {
+        return ResponseEntity.ok("Number of existing nodes: " + existingNodes);
+    }
 
 }
