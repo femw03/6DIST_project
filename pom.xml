@@ -95,7 +95,7 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <configuration>
-                        <mainClass>origin/project/naming/ProjectApplication</mainClass>
+                        <mainClass>origin.project.naming.ProjectApplication</mainClass>
                     </configuration>
                 </plugin>
             </plugins>
