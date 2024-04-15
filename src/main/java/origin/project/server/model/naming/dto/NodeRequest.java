@@ -12,5 +12,9 @@ public class NodeRequest {
     String ip;
     int hash = -1;
 
+    public NodeRequest(String name, String ip) {
+        this.name = name;
+        this.ip = ip;
+    }
 
 }

@@ -24,4 +24,6 @@ public class Node {
     public void bootstrap() {
         MulticastService.sendMulticastMessage(this.name, this.ipAddress);
     }
+
+
 }

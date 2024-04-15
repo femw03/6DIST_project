@@ -1,5 +1,6 @@
 package origin.project.client.multicast;
 
+import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.service.HashService;
 
@@ -9,11 +10,22 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
+@Service
 public class MulticastService {
     private static final String MULTICAST_GROUP = "230.0.0.0";
     private static final int PORT = 8888;
     private static final String namingServerUrl = "/naming-server";
     private Node node;
+    private MulticastSocket socket;
+    public MulticastService(Node node) throws IOException {
+        this.node = node;
+
+        socket = new MulticastSocket(PORT);
+        InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
+        socket.joinGroup(group);
+
+        new Thread(this::receiveMulticastMessage).start();
+    }
 
     public static void sendMulticastMessage(String nodeName, InetAddress IP) {
         try {
@@ -30,18 +42,19 @@ public class MulticastService {
         }
     }
 
-    public void receiveMulticastMessage() throws IOException {
-        MulticastSocket socket = new MulticastSocket(PORT);
-        InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
-        socket.joinGroup(group);
-
-        byte[] buffer = new byte[1024];
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+    public void receiveMulticastMessage() {
 
         while (true) {
-            socket.receive(packet);
-            String message = new String(packet.getData(), 0, packet.getLength());
-            processMulticastMessage(message, packet.getAddress().getHostAddress());
+            try {
+                byte[] buffer = new byte[1024];
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                socket.receive(packet);
+                String message = new String(packet.getData(), 0, packet.getLength());
+                processMulticastMessage(message, packet.getAddress().getHostAddress());
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
         }
     }
 
