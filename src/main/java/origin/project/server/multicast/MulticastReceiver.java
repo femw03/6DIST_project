@@ -47,9 +47,7 @@ public class MulticastReceiver {
     }
 
     public void receiveMulticastMessage() {
-
         while (true) {
-
             try {
                 byte[] buffer = new byte[1024];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -65,20 +63,10 @@ public class MulticastReceiver {
                 }
 
                 String nodeName = parts[0];
-                String ipAddress = parts[1];
+                InetAddress ipAddress = InetAddress.getByName(parts[1]);
 
                 namingServerController.addNode(new NodeRequest(nodeName, ipAddress));
 
-            /*
-            // Calculate hash based on node name
-            int hash = namingService.hashingFunction(nodeName);
-
-            // Add hash and IP address to map data structure
-            NamingEntry namingEntry = new NamingEntry(hash, ipAddress);
-            jsonService.addEntryToJsonFile(FILE_PATH, namingEntry);
-            namingRepository.save(namingEntry);
-
-            */
 
                 // Respond to new node with number of existing nodes
                 int existingNodesCount = (int) namingRepository.count();
@@ -95,11 +83,10 @@ public class MulticastReceiver {
         }
     }
 
-    private void sendResponse(String message, String receiverIP) {
+    private void sendResponse(String message, InetAddress receiverIP) {
         try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress receiverAddress = InetAddress.getByName(receiverIP);
             byte[] buf = message.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverAddress, PORT);
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, PORT);
             socket.send(packet);
         } catch (IOException e) {
             e.printStackTrace();

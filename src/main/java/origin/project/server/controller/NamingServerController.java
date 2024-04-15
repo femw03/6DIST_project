@@ -13,6 +13,7 @@ import origin.project.server.repository.NamingRepository;
 import origin.project.server.service.JsonService;
 import origin.project.server.service.NamingService;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -47,7 +48,7 @@ public class NamingServerController {
     public ResponseEntity<String> addNode(@RequestBody NodeRequest nodeReq) {
         logger.info("POST: /add-node/"+ nodeReq.toString());
         String name = nodeReq.getName();
-        String ipAddress = nodeReq.getIp();
+        InetAddress ipAddress = nodeReq.getIp();
 
         if (ipAddress == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"ERROR: ip cannot be null.");
@@ -75,7 +76,7 @@ public class NamingServerController {
     @DeleteMapping("/remove-node")
     public ResponseEntity<String> removeNode(@RequestBody NodeRequest nodeRequest) {
         logger.info("DELETE: /node/" + nodeRequest.toString());
-        String ipAddress = nodeRequest.getIp();
+        InetAddress ipAddress = nodeRequest.getIp();
         String name = nodeRequest.getName();
         int hash = nodeRequest.getHash();
 
@@ -128,7 +129,7 @@ public class NamingServerController {
     }
 
     @GetMapping("/file-location/{file-name}")
-    public String getFileLocation(@PathVariable("file-name") String fileName) {
+    public InetAddress getFileLocation(@PathVariable("file-name") String fileName) {
         logger.info("GET /file-location/" + fileName);
         if (namingRepository.count() < 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No nodes available in the system.");
@@ -176,9 +177,5 @@ public class NamingServerController {
         return namingService.hashingFunction(name);
     }
 
-    @PostMapping
-    public ResponseEntity<String> respondToMulticast(@RequestBody int existingNodes) {
-        return ResponseEntity.ok("Number of existing nodes: " + existingNodes);
-    }
 
 }

@@ -10,7 +10,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -53,7 +52,6 @@ public class JsonService {
             // append new entry
             List<NamingEntry> originalList = new ArrayList<>();
             if (objects != null) {
-                // append new entry
                 originalList = new ArrayList<>(List.of(objects));
 
             }

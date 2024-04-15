@@ -17,6 +17,7 @@ public class MulticastService {
     private static final String namingServerUrl = "/naming-server";
     private Node node;
     private MulticastSocket socket;
+
     public MulticastService(Node node) throws IOException {
         this.node = node;
 
@@ -43,7 +44,6 @@ public class MulticastService {
     }
 
     public void receiveMulticastMessage() {
-
         while (true) {
             try {
                 byte[] buffer = new byte[1024];
@@ -73,7 +73,7 @@ public class MulticastService {
         int senderHash = HashService.calculateHashFromNamingServer(senderName, namingServerUrl);
 
         // Calculate hash of this node's name and IP address (assuming these are set in the Node class)
-        int currentHash = HashService.calculateHashFromNamingServer(node.getName(), namingServerUrl);;
+        int currentHash = HashService.calculateHashFromNamingServer(node.getNodeName(), namingServerUrl);;
 
         // Update currentID, nextID, previousID based on the received multicast message
         if (currentHash < senderHash && senderHash < node.getNextID()) {
