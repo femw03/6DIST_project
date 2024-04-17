@@ -117,6 +117,21 @@ public class NamingServerController {
         return optionalEntry;
     }
 
+
+    @GetMapping("/get-IP-by-hash/{hashValue}")
+    public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
+        logger.info("GET: /get-node/"+ hashValue);
+        Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
+        if(optionalEntry.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
+        }
+
+        NamingEntry entry = optionalEntry.get();
+        InetAddress IP = entry.getIP();
+        return IP;
+    }
+
+
     @GetMapping("/get-node-by-name/{name}")
     public Optional<NamingEntry> getNode(@PathVariable("name") String name) {
         logger.info("GET: /get-node/"+ name);
