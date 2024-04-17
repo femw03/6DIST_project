@@ -11,7 +11,7 @@ import java.net.UnknownHostException;
 @SpringBootApplication
 public class NodeRunnable {
 
-    public static void main(String[] args) throws UnknownHostException {
+    public static void main(String[] args) {
 
         // Check if enough arguments are provided
         if (args.length < 2) {
