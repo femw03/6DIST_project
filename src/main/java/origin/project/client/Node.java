@@ -13,6 +13,18 @@ import java.net.UnknownHostException;
 @Component
 public class Node {
 
+    @Value("${multicast.port}")
+    private int multicastPort;
+
+    @Value("${multicast.group}")
+    private String multicastGroup;
+
+    @Value("${naming.server.base.url}")
+    private String namingServerUrl;
+
+    @Value("${naming.server.ip}")
+    private String namingServerIp;
+
     private int currentID;
     private int nextID=-1;
     private int previousID=-1;

@@ -1,26 +1,31 @@
 package origin.project.client.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
 public class MessageService {
-    private static final String MULTICAST_GROUP = "230.0.0.0";
-    private static final int PORT = 8888;
-    private static final String hostnameServer = "localhost";
-    private static final int portServer = 8080;
-    private static final String namingServerUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
-    private Node node;
+    @Autowired
+    private static Node node;
+
+    private static final int PORT = node.getMulticastPort();
+    private static final String MULTICAST_GROUP = node.getMulticastGroup();
+    private final String namingServerUrl = node.getNamingServerUrl();
+    private final String namingServerIp = node.getNamingServerIp();
+
     private MulticastSocket socket;
-    Logger logger = Logger.getLogger(NamingServerController.class.getName());
+    static Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
     public MessageService(Node node) throws IOException {
@@ -53,11 +58,12 @@ public class MessageService {
             try {
                 byte[] buffer = new byte[1024];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                logger.info("testtttttttt");
                 socket.receive(packet);
                 String message = new String(packet.getData(), 0, packet.getLength());
-                logger.info(message);
+                logger.info("hello");
 
-                if (Objects.equals(packet.getAddress().toString(), hostnameServer)) {
+                if (Objects.equals(packet.getAddress().toString(), namingServerIp)) {
                     processUnicastMessage(message, packet.getAddress().getHostAddress());
                 } else {
                     processMulticastMessage(message, packet.getAddress().getHostAddress());
@@ -118,7 +124,7 @@ public class MessageService {
         }
     }
 
-    private String getRequest(String endpoint, String request) {
+    public static String getRequest(String endpoint, String request) {
         try {
             URL url = new URL(endpoint);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -148,6 +154,50 @@ public class MessageService {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static String deleteRequest(String endpoint, String requestbody, String request) {
+
+        try {
+            String output;
+
+            URL url = new URL(endpoint);
+//            System.out.println(url);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setDoOutput(true);
+
+            // Try writing the email to JSON
+            try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
+                byte[] requestBody = requestbody.getBytes(StandardCharsets.UTF_8);
+                outputStream.write(requestBody, 0, requestBody.length);
+            }
+
+            // If connection is successful, we can read the response
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                // reader
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                // response
+                StringBuilder response = new StringBuilder();
+                String line;
+                // build response = adding status code, status message, headers, ...
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                output = response.toString();
+            }
+            else {
+                // If the request was not successful, handle the error accordingly
+                output = "Failed to " + request + ". HTTP Error: " + connection.getResponseCode();
+            }
+            connection.disconnect();
+            return output;
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
