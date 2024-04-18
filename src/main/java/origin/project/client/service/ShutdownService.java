@@ -14,14 +14,11 @@ import java.util.Optional;
 
 @Service
 public class ShutdownService {
-    /*
-     * Shutdown, tell (next hash ID + previous hash ID)
-     * Delete Node from namingServer mapping
-     *  */
     @Autowired
-    Node node;
-
-    private static final String namingServerUrl = "/naming-server";
+    private Node node;
+    private static final String hostnameServer = "localhost";
+    private static final int portServer = 8080;
+    private static final String namingServerUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";;
 
     private int nextID;
     private int previousID;
@@ -30,26 +27,26 @@ public class ShutdownService {
     private InetAddress IPprevious;
     private static final int PORT = 8888;
     public void Shutdown(Node node) throws UnknownHostException {
-        RestTemplate restTemplate = new RestTemplate();
         nextID = node.getNextID();
         previousID = node.getPreviousID();
         myID = node.getCurrentID();
 
         // next
         String URLnext = namingServerUrl + "/get-IP-by-hash/" + nextID;
-        IPnext = restTemplate.getForObject(URLnext, InetAddress.class);
+        IPnext = InetAddress.getByName(MessageService.getRequest(URLnext, "get next ip"));
 
         // previous
         String URLprevious = namingServerUrl + "/get-IP-by-hash/" + previousID;
-        IPprevious = restTemplate.getForObject(URLprevious, InetAddress.class);
+        IPprevious = InetAddress.getByName(MessageService.getRequest(URLprevious, "get previous ip"));
 
         // sending
         sendID(IPnext,myID,previousID);
         sendID(IPprevious,myID,nextID);
 
         // remove mine
-        String URLdelete = namingServerUrl + "/remove-node/" + new NodeRequest(node.getNodeName(),node.getIpAddress());
-        restTemplate.delete(URLdelete);
+        String URLdelete = namingServerUrl + "/remove-node/";
+        String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
+        MessageService.deleteRequest(URLdelete, nodeBody, "removeNode");
     }
 
     private void sendID(InetAddress receiverIP, int ID, int targetID) {
@@ -63,4 +60,6 @@ public class ShutdownService {
             e.printStackTrace();
         }
     }
+
+
 }

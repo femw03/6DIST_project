@@ -1,8 +1,10 @@
 package origin.project.server.controller;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,9 +34,27 @@ public class NamingServerController {
     private NamingService namingService;
     @Autowired
     private JsonService jsonService;
+
+    @Value("${multicast.port}")
+    private int multicastPort;
+
+    @Value("${multicast.group}")
+    private String multicastGroup;
+
+    @Value("${naming.server.base.url}")
+    private String namingServerUrl;
+
+    @Value("${naming.server.ip}")
+    private String namingServerIp;
+
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
     private static final String FILE_PATH = "src/main/resources/nodes.json";
 
+    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
+        this.namingRepository = namingRepository;
+        this.namingService = namingService;
+        this.jsonService = jsonService;
+    }
 
     @GetMapping("/all-nodes")
     public Iterable<NamingEntry> getNamingEntries() {
