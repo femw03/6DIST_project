@@ -3,6 +3,7 @@ package origin.project.server.service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import origin.project.server.controller.NamingServerController;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.repository.NamingRepository;
 
@@ -16,22 +17,26 @@ import java.util.logging.Logger;
 public class DatabaseLoader {
     @Autowired
     private NamingRepository namingRepository;
-
     @Autowired
     private JsonService jsonService;
+    @Autowired
+    private NamingServerController namingServerController;
 
-    private static final String FILE_PATH = "src/main/resources/nodes.json";
-    private static final String DIRECTORY = "src/main/resources";
+    private String FILE_PATH;
+    private String DIRECTORY;
     private static final Logger logger = Logger.getLogger(DatabaseLoader.class.getName());
 
 
-    public DatabaseLoader(NamingRepository namingRepository, JsonService jsonService) {
+    public DatabaseLoader(NamingRepository namingRepository, JsonService jsonService, NamingServerController namingServerController) {
         this.namingRepository = namingRepository;
         this.jsonService = jsonService;
+        this.namingServerController = namingServerController;
     }
 
     @PostConstruct
     private void initDatabase() {
+        FILE_PATH = namingServerController.getFILE_PATH();
+        DIRECTORY = namingServerController.getDIRECTORY();
         try {
             Path path = Path.of(FILE_PATH);
             if (Files.exists(path)) {

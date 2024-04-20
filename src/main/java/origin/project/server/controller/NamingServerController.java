@@ -37,18 +37,14 @@ public class NamingServerController {
 
     @Value("${multicast.port}")
     private int multicastPort;
-
     @Value("${multicast.group}")
     private String multicastGroup;
-
-    @Value("${naming.server.base.url}")
-    private String namingServerUrl;
-
-    @Value("${naming.server.ip}")
-    private String namingServerIp;
+    @Value("${naming.server.filepath}")
+    private String FILE_PATH;
+    @Value("${naming.server.directory}")
+    private String DIRECTORY;
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
-    private static final String FILE_PATH = "src/main/resources/nodes.json";
 
     public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
         this.namingRepository = namingRepository;
@@ -209,6 +205,7 @@ public class NamingServerController {
 
     @GetMapping("/get-hash/{name}")
     public int getHashID(@PathVariable("name") String name) {
+        logger.info("GET /hash/" + name);
         return namingService.hashingFunction(name);
     }
 

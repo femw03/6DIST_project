@@ -86,4 +86,37 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>ProjectYServer</id>
+            <build>
+                <finalName>ProjectYServer</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>origin.project.server.ServerRunnable</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>ProjectYNode</id>
+            <build>
+                <finalName>ProjectYNode</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>origin.project.client.NodeRunnable</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
