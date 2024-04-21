@@ -93,4 +93,31 @@ public class JsonService {
             throw new RuntimeException(e);
         }
     }
+
+    public void clearJsonFile(String filePath) {
+        try {
+            // first read the array
+            FileReader reader = new FileReader(filePath);
+            Gson gson = new Gson();
+            NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
+
+            // check if objects array is null or empty
+            if (objects == null) {
+                objects = new NamingEntry[0];   // initialize empty array
+            }
+
+            // remove all entries by creating new empty list
+            List<NamingEntry> originalList = new ArrayList<>();
+
+            // write new list to file
+            gson = new GsonBuilder().setPrettyPrinting().create();
+            FileWriter fileWriter = new FileWriter(filePath);
+            gson.toJson(originalList, fileWriter);
+
+            fileWriter.close();
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

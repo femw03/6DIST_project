@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.naming.model.naming.NamingEntry;
@@ -46,7 +47,7 @@ public class NamingServerController {
                 .toList();
     }
     @PostMapping("/add-node")
-    public int addNode(@RequestBody NodeRequest nodeReq) {
+    public ResponseEntity<String> addNode(@RequestBody NodeRequest nodeReq) {
         logger.info("POST: /add-node/"+ nodeReq.toString());
         String name = nodeReq.getName();
         String ipAddress = nodeReq.getIp();
@@ -68,14 +69,14 @@ public class NamingServerController {
         }
 
         NamingEntry namingEntry = new NamingEntry(hash, ipAddress);
-        System.out.println(namingEntry.getIP());
+        //System.out.println(namingEntry.getIP());
         jsonService.addEntryToJsonFile(FILE_PATH, namingEntry);
         namingRepository.save(namingEntry);
-        return hash;
+        return ResponseEntity.ok("Node with hashID "+ hash + " successfully created!");
     }
 
     @DeleteMapping("/remove-node")
-    public void removeNode(@RequestBody NodeRequest nodeRequest) {
+    public ResponseEntity<String> removeNode(@RequestBody NodeRequest nodeRequest) {
         logger.info("DELETE: /node/" + nodeRequest.toString());
         String ipAddress = nodeRequest.getIp();
         String name = nodeRequest.getName();
@@ -105,6 +106,7 @@ public class NamingServerController {
         else{
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ERROR : No node with given name.");
         }
+        return ResponseEntity.ok("Node with hashID "+ hash + " successfully removed!");
     }
 
     @GetMapping("/get-node/{hashValue}")
@@ -150,16 +152,21 @@ public class NamingServerController {
 
     }
 
-//    @ResponseStatus(HttpStatus.BAD_REQUEST)
-//    @ExceptionHandler(MethodArgumentNotValidException.class)
-//    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
-//        Map<String, String> errors = new HashMap<>();
-//        ex.getBindingResult().getAllErrors().forEach((error) -> {
-//            String fieldName = ((FieldError) error).getField();
-//            String errorMessage = error.getDefaultMessage();
-//            errors.put(fieldName, errorMessage);
-//        });
-//        return errors;
-//    }
+    @DeleteMapping("/clear")
+    public ResponseEntity<String> clearRepository() {
+        try {
+            namingRepository.deleteAll();
+            jsonService.clearJsonFile(FILE_PATH);
+            return ResponseEntity.ok("Cleared successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-hash/{name}")
+    public int getHashID(@PathVariable("name") String name) {
+        return namingService.hashingFunction(name);
+    }
+
 }
 
