@@ -1,9 +1,9 @@
 package origin.project.client.service;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
-import origin.project.server.controller.NamingServerController;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -17,23 +17,23 @@ import java.util.logging.Logger;
 @Service
 public class MessageService {
     @Autowired
-    private static Node node;
+    private Node node;
 
-    private int PORT;// = node.getMulticastPort();
-    private String MULTICAST_GROUP; // = node.getMulticastGroup();
-    private String namingServerUrl; // = node.getNamingServerUrl();
-    private String namingServerIp; // = node.getNamingServerIp();
-
+    private static int PORT;
+    private static String MULTICAST_GROUP;
     private MulticastSocket socket;
     static Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
-    public MessageService(Node node) throws IOException {
+    public MessageService(Node node) {
         this.node = node;
-        this.PORT = node.getMulticastPort();
-        this.MULTICAST_GROUP = node.getMulticastGroup();
-        this.namingServerIp = node.getNamingServerIp();
-        this.namingServerUrl = node.getNamingServerUrl();
+    }
+
+    @PostConstruct
+    public void init() throws IOException {
+        PORT = node.getMulticastPort();
+        MULTICAST_GROUP = node.getMulticastGroup();
+
         socket = new MulticastSocket(PORT);
         InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
         socket.joinGroup(group);
@@ -45,7 +45,7 @@ public class MessageService {
         try {
             InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
             try (DatagramSocket socket = new DatagramSocket()) {
-                String message = nodeName + "," + IP; // Combine name and IP address
+                String message = "newNode," + nodeName + "," + IP; // Combine name and IP address
                 byte[] buf = message.getBytes();
 
                 DatagramPacket packet = new DatagramPacket(buf, buf.length, group, PORT);
@@ -61,83 +61,151 @@ public class MessageService {
             try {
                 byte[] buffer = new byte[1024];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                logger.info("testtttttttt");
                 socket.receive(packet);
                 String message = new String(packet.getData(), 0, packet.getLength());
-                logger.info("hello");
 
-                if (Objects.equals(packet.getAddress().toString(), namingServerIp)) {
-                    processUnicastMessage(message, packet.getAddress().getHostAddress());
-                } else {
-                    processMulticastMessage(message, packet.getAddress().getHostAddress());
+                if (!Objects.equals(packet.getAddress().toString(), node.getIpAddress().toString())) {
+                    processMessage(message, packet.getAddress());
                 }
+
             }
             catch (IOException e){
-                try {
-                    new FailureService().Failure(node); //???
-                } catch (UnknownHostException ex) {
-                    throw new RuntimeException(ex);
-                }
                 e.printStackTrace();
             }
         }
     }
 
-    private void processUnicastMessage(String message, String senderIPAddress) throws IOException {
-        logger.info("Yessss");
+    private void processMessage(String message, InetAddress senderIPAddress) throws IOException {
+        String[] parts = message.split(",");
+        if (parts[0].equals("newNode")) {
+            // Process multicast message
+            logger.info("Received multicast");
+            processMulticastMessage(message, senderIPAddress);
+        } else {
+            // Process unicast message
+            logger.info("Received unicast");
+            processUnicastMessage(message,senderIPAddress);
+        }
     }
 
-    private void processMulticastMessage(String multicastMessage, String senderIPAddress) throws IOException {
+    private void processUnicastMessage(String message, InetAddress senderIPAddress) throws IOException {
+        String[] parts = message.split(",");
+        if (parts[0].equals("namingServer")) {
+            logger.info("Processing unicast from naming server with IP address "+senderIPAddress.toString());
+            node.setNamingServerIp(senderIPAddress);
+            node.setNamingServerUrl("http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/naming-server");
+
+            if (parts.length != 3) {
+                throw new IOException("Invalid multicast message format");
+            }
+
+            int existingNodes = Integer.parseInt(parts[1]);
+            int currentID = Integer.parseInt(parts[2]);
+            node.setCurrentID(currentID);
+
+            if (existingNodes <= 1) {
+                node.setPreviousID(node.getCurrentID());
+                node.setNextID(node.getCurrentID());
+                logger.info("Previous ID: " + node.getPreviousID());
+                logger.info("Current ID: " + node.getCurrentID());
+                logger.info("Next ID: " + node.getNextID());
+            }
+
+        } else {
+            logger.info("Processing unicast from other node with IP address "+senderIPAddress.toString());
+            if (parts.length != 2) {
+                throw new IOException("Invalid multicast message format");
+            }
+
+            int previousID = Integer.parseInt(parts[0]);
+            int nextID = Integer.parseInt(parts[1]);
+
+            node.setPreviousID(previousID);
+            node.setNextID(nextID);
+            logger.info("Previous ID: " + node.getPreviousID());
+            logger.info("Current ID: " + node.getCurrentID());
+            logger.info("Next ID: " + node.getNextID());
+        }
+
+    }
+
+    private void processMulticastMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException {
+        logger.info("Processing multicast from other node with IP address "+senderIPAddress.toString());
         // Extract sender's name and IP address from the message
         String[] parts = multicastMessage.split(",");
 
-        if (parts.length != 2) {
+        if (parts.length != 3) {
             throw new IOException("Invalid multicast message format");
         }
 
-        String senderName = parts[0];
-        String senderIP = parts[1];
+        // parts[0] = "newNode"
+        String senderName = parts[1];
+        String senderIP = parts[2];
 
         // Calculate hash of node that sent multicast message
-        String url_sender = namingServerUrl + "/get-hash/" + senderName;
+        String url_sender = node.getNamingServerUrl() + "/get-hash/" + senderName;
         int senderHash = Integer.parseInt(Objects.requireNonNull(getRequest(url_sender, "get sender hash")));
 
         // Calculate hash of this node's name and IP address (assuming these are set in the Node class)
-        String url_current = namingServerUrl + "/get-hash/" + node.getNodeName();
+        String url_current = node.getNamingServerUrl() + "/get-hash/" + node.getNodeName();
         int currentHash = Integer.parseInt(Objects.requireNonNull(getRequest(url_current, "get current hash")));
 
+
         // Update currentID, nextID, previousID based on the received multicast message
-        if (currentHash < senderHash && senderHash < node.getNextID()) {
-            node.setNextID(senderHash);
+        if (currentHash < senderHash && senderHash <= node.getNextID()) {
+            logger.info("case 1");
             // Send response to sender with currentID and nextID information
             sendResponse(senderIPAddress, node.getCurrentID(), node.getNextID());
+            node.setNextID(senderHash);
         }
 
-        if (node.getPreviousID() < senderHash && senderHash < currentHash) {
-            node.setPreviousID(senderHash);
+        else if (node.getPreviousID() <= senderHash && senderHash < currentHash) {
+            logger.info("case 2");
             // Send response to sender with currentID and previousID information
-            sendResponse(senderIPAddress, node.getCurrentID(), node.getPreviousID());
+            sendResponse(senderIPAddress, node.getPreviousID(), node.getCurrentID());
+            node.setPreviousID(senderHash);
         }
+
+        else if (node.getPreviousID() == node.getNextID() && node.getPreviousID() == node.getCurrentID()) {     // only 1 node in network
+            logger.info("case 3");
+            // Send response to sender with currentID information
+            sendResponse(senderIPAddress, node.getCurrentID(), node.getCurrentID());
+            node.setPreviousID(senderHash);
+            node.setNextID(senderHash);
+        }
+
+        else if (node.getCurrentID() < node.getPreviousID()) {
+            logger.info("case 4");
+            // Send response to sender with currentID information
+            sendResponse(senderIPAddress, node.getPreviousID(), node.getCurrentID());
+            node.setPreviousID(senderHash);
+        }
+
+        else if (node.getCurrentID() > node.getNextID()) {
+            logger.info("case 5");
+            // Send response to sender with currentID information
+            sendResponse(senderIPAddress, node.getCurrentID(), node.getNextID());
+            node.setNextID(senderHash);
+        }
+
+        logger.info("Previous ID: " + node.getPreviousID());
+        logger.info("Current ID: " + node.getCurrentID());
+        logger.info("Next ID: " + node.getNextID());
     }
 
-    private void sendResponse(String receiverIP, int currentID, int targetID) throws UnknownHostException {
+    private void sendResponse(InetAddress receiverIP, int currentID, int targetID) {
         try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress receiverAddress = InetAddress.getByName(receiverIP);
             String responseMessage = currentID + "," + targetID;
             byte[] buf = responseMessage.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverAddress, PORT);
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, PORT);
+            logger.info("Sending response to "+receiverIP);
             socket.send(packet);
         } catch (IOException e) {
-            try {
-                new FailureService().Failure(node); //???
-            } catch (UnknownHostException ex) {
-                throw new RuntimeException(ex);
-            }
             e.printStackTrace();
         }
     }
 
-    public static String getRequest(String endpoint, String request) {
+    public String getRequest(String endpoint, String request) {
         try {
             URL url = new URL(endpoint);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -169,7 +237,7 @@ public class MessageService {
         return null;
     }
 
-    public static String deleteRequest(String endpoint, String requestbody, String request) {
+    public String deleteRequest(String endpoint, String requestbody, String request) {
 
         try {
             String output;
@@ -212,4 +280,5 @@ public class MessageService {
             throw new RuntimeException(e);
         }
     }
+
 }

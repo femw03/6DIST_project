@@ -3,7 +3,6 @@ package origin.project.server.service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-//import origin.project.server.Server;
 import origin.project.server.controller.NamingServerController;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
@@ -20,9 +19,9 @@ public class MessageService {
     @Autowired
     private NamingRepository namingRepository;
     @Autowired
+    private NamingService namingService;
+    @Autowired
     private NamingServerController namingServerController;
-    //@Autowired
-    //private Server server;
 
     private int PORT;
     private String MULTICAST_GROUP ;
@@ -30,15 +29,17 @@ public class MessageService {
     Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
-    public MessageService(NamingRepository namingRepository, NamingServerController namingServerController) throws IOException {
+    public MessageService(NamingRepository namingRepository, NamingServerController namingServerController, NamingService namingService) {
         this.namingRepository = namingRepository;
         this.namingServerController = namingServerController;
+        this.namingService = namingService;
     }
 
     @PostConstruct
     public void init() throws IOException {
         PORT = namingServerController.getMulticastPort();
         MULTICAST_GROUP = namingServerController.getMulticastGroup();
+        System.out.println(PORT);
 
         socket = new MulticastSocket(PORT);
         InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
@@ -59,12 +60,13 @@ public class MessageService {
                 // Parse multicast message and extract node name, IP address
                 String[] parts = message.split(",");
 
-                if (parts.length != 2) {
+                if (parts.length != 3) {
                     throw new IOException("Invalid multicast message format");
                 }
 
-                String nodeName = parts[0];
-                String ipAddressString = parts[1];
+                // parts[0] = "newNode"
+                String nodeName = parts[1];
+                String ipAddressString = parts[2];
                 if (ipAddressString.startsWith("/")) {
                     // Extract the IP address without the leading slash
                     ipAddressString = ipAddressString.substring(1);
@@ -78,7 +80,10 @@ public class MessageService {
 
                 logger.info("Multicast message handled successfully. Existing nodes count: " + existingNodesCount);
 
-                sendResponse(String.valueOf(existingNodesCount), ipAddress);
+                // Calculate hash of nodeName
+                int nodeHash = namingService.hashingFunction(nodeName);
+
+                sendResponse(existingNodesCount, nodeHash, ipAddress);
             }
             catch (IOException e){
                 e.printStackTrace();
@@ -86,8 +91,9 @@ public class MessageService {
         }
     }
 
-    private void sendResponse(String message, InetAddress receiverIP) {
+    private void sendResponse(int existingNodesCount, int hash, InetAddress receiverIP) {
         try (DatagramSocket socket = new DatagramSocket()) {
+            String message = "namingServer," + existingNodesCount + "," + hash;
             byte[] buf = message.getBytes();
             DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, PORT);
             socket.send(packet);

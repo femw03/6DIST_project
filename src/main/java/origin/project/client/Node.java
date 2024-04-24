@@ -23,7 +23,9 @@ public class Node {
     private String namingServerUrl;
 
     @Value("${naming.server.ip}")
-    private String namingServerIp;
+    private InetAddress namingServerIp;
+    @Value("${naming.server.port}")
+    private int namingServerPort;
 
     private int currentID;
     private int nextID=-1;
