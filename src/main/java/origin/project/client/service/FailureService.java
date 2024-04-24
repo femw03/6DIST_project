@@ -13,6 +13,8 @@ import java.net.UnknownHostException;
 @Service
 public class FailureService {
     @Autowired
+    private MessageService messageService;
+    @Autowired
     Node node;
     private static final String hostnameServer = "localhost";
     private static final int portServer = 8080;
@@ -35,11 +37,11 @@ public class FailureService {
 
         // next
         String URLnext = namingServerUrl + "/get-IP-by-hash/" + nextID;
-        IPnext = InetAddress.getByName(MessageService.getRequest(URLnext, "get next ip"));
+        IPnext = InetAddress.getByName(messageService.getRequest(URLnext, "get next ip"));
 
         // previous
         String URLprevious = namingServerUrl + "/get-IP-by-hash/" + previousID;
-        IPprevious = InetAddress.getByName(MessageService.getRequest(URLprevious, "get previous ip"));
+        IPprevious = InetAddress.getByName(messageService.getRequest(URLprevious, "get previous ip"));
 
         // sending
         sendID(IPnext,myID,previousID);
@@ -48,7 +50,7 @@ public class FailureService {
         // remove mine
         String URLdelete = namingServerUrl + "/remove-node/";
         String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
-        MessageService.deleteRequest(URLdelete, nodeBody, "removeNode");
+        messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
     }
 
     private void sendID(InetAddress receiverIP, int ID, int targetID) {

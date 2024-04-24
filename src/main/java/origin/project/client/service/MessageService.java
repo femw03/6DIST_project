@@ -109,7 +109,10 @@ public class MessageService {
                 logger.info("Previous ID: " + node.getPreviousID());
                 logger.info("Current ID: " + node.getCurrentID());
                 logger.info("Next ID: " + node.getNextID());
+            } else if (existingNodes > 1) {
+                new PingService(node);
             }
+
 
         } else {
             logger.info("Processing unicast from other node with IP address "+senderIPAddress.toString());

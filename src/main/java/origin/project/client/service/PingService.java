@@ -6,27 +6,27 @@ import origin.project.client.Node;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.logging.Logger;
 
 
-@Service
+//@Service
 public class PingService {
-    @Autowired
+    //@Autowired
+    private MessageService messageService;
+    //@Autowired
     private Node node;
     private int PORT;
     private String MULTICAST_GROUP;
-    private int nextID;
-    private int previousID;
-    private int myID;
     private InetAddress IPnext;
     private InetAddress IPprevious;
-    private static final String hostnameServer = "localhost";
-    private static final int portServer = 8080;
-    private static final String namingServerUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
+    private String namingServerUrl;
     private MulticastSocket socket;
+    static Logger logger = Logger.getLogger(PingService.class.getName());
     public PingService(Node node) throws IOException {
         this.node = node;
         this.PORT = node.getMulticastPort();
         this.MULTICAST_GROUP = node.getMulticastGroup();
+        this.namingServerUrl = node.getNamingServerUrl();
 
         socket = new MulticastSocket(PORT);
         InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
@@ -35,26 +35,32 @@ public class PingService {
         new Thread(this::Ping).start();
     }
     public void Ping() {
-        try {
-            nextID = node.getNextID();
-            previousID = node.getPreviousID();
-            myID = node.getCurrentID();
+        while (true) {
+            try {
+                int nextID = node.getNextID();
+                int previousID = node.getPreviousID();
+                int myID = node.getCurrentID();
 
-            // next
-            String URLnext = namingServerUrl + "/get-IP-by-hash/" + nextID;
-            IPnext = InetAddress.getByName(MessageService.getRequest(URLnext, "get next ip"));
+                // ???
+                if (nextID != -1 && previousID != -1 && myID != -1) {
+                    // next
+                    String URLnext = namingServerUrl + "/get-IP-by-hash/" + nextID;
+                    IPnext = InetAddress.getByName(messageService.getRequest(URLnext, "get next ip"));
 
-            // previous
-            String URLprevious = namingServerUrl + "/get-IP-by-hash/" + previousID;
-            IPprevious = InetAddress.getByName(MessageService.getRequest(URLprevious, "get previous ip"));
+                    // previous
+                    String URLprevious = namingServerUrl + "/get-IP-by-hash/" + previousID;
+                    IPprevious = InetAddress.getByName(messageService.getRequest(URLprevious, "get previous ip"));
 
-            //send
-            sendResponse(IPnext.toString());
-            sendResponse(IPprevious.toString());
-        }
-
-        catch (IOException e){
-            e.printStackTrace();
+                    //send
+                    sendResponse(IPnext.toString());
+                    sendResponse(IPprevious.toString());
+                } else {
+                    logger.info("nextID: " + nextID + " previousID: " + previousID + " myID: " + myID);
+                    // Find way to make him wait on response from server!!!
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
