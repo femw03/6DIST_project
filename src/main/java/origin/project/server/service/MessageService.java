@@ -3,7 +3,7 @@ package origin.project.server.service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import origin.project.server.Server;
+//import origin.project.server.Server;
 import origin.project.server.controller.NamingServerController;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
@@ -21,8 +21,8 @@ public class MessageService {
     private NamingRepository namingRepository;
     @Autowired
     private NamingServerController namingServerController;
-    @Autowired
-    private Server server;
+    //@Autowired
+    //private Server server;
 
     private int PORT;
     private String MULTICAST_GROUP ;

@@ -19,10 +19,10 @@ public class MessageService {
     @Autowired
     private static Node node;
 
-    private static final int PORT = node.getMulticastPort();
-    private static final String MULTICAST_GROUP = node.getMulticastGroup();
-    private final String namingServerUrl = node.getNamingServerUrl();
-    private final String namingServerIp = node.getNamingServerIp();
+    private int PORT;// = node.getMulticastPort();
+    private String MULTICAST_GROUP; // = node.getMulticastGroup();
+    private String namingServerUrl; // = node.getNamingServerUrl();
+    private String namingServerIp; // = node.getNamingServerIp();
 
     private MulticastSocket socket;
     static Logger logger = Logger.getLogger(MessageService.class.getName());
@@ -30,7 +30,10 @@ public class MessageService {
 
     public MessageService(Node node) throws IOException {
         this.node = node;
-
+        this.PORT = node.getMulticastPort();
+        this.MULTICAST_GROUP = node.getMulticastGroup();
+        this.namingServerIp = node.getNamingServerIp();
+        this.namingServerUrl = node.getNamingServerUrl();
         socket = new MulticastSocket(PORT);
         InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
         socket.joinGroup(group);
@@ -38,7 +41,7 @@ public class MessageService {
         new Thread(this::receiveMessage).start();
     }
 
-    public static void sendMulticastMessage(String nodeName, InetAddress IP) {
+    public void sendMulticastMessage(String nodeName, InetAddress IP) {
         try {
             InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
             try (DatagramSocket socket = new DatagramSocket()) {
@@ -70,6 +73,11 @@ public class MessageService {
                 }
             }
             catch (IOException e){
+                try {
+                    new FailureService().Failure(node); //???
+                } catch (UnknownHostException ex) {
+                    throw new RuntimeException(ex);
+                }
                 e.printStackTrace();
             }
         }
@@ -112,7 +120,7 @@ public class MessageService {
         }
     }
 
-    private void sendResponse(String receiverIP, int currentID, int targetID) {
+    private void sendResponse(String receiverIP, int currentID, int targetID) throws UnknownHostException {
         try (DatagramSocket socket = new DatagramSocket()) {
             InetAddress receiverAddress = InetAddress.getByName(receiverIP);
             String responseMessage = currentID + "," + targetID;
@@ -120,6 +128,11 @@ public class MessageService {
             DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverAddress, PORT);
             socket.send(packet);
         } catch (IOException e) {
+            try {
+                new FailureService().Failure(node); //???
+            } catch (UnknownHostException ex) {
+                throw new RuntimeException(ex);
+            }
             e.printStackTrace();
         }
     }
@@ -199,5 +212,4 @@ public class MessageService {
             throw new RuntimeException(e);
         }
     }
-
 }

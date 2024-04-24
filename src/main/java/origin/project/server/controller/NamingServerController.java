@@ -48,7 +48,7 @@ public class NamingServerController {
     private String namingServerIp;
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
-    private static final String FILE_PATH = "src/main/resources/nodes.json";
+    private static final String FILE_PATH = "resources/nodes.json";
 
     public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
         this.namingRepository = namingRepository;
@@ -211,6 +211,5 @@ public class NamingServerController {
     public int getHashID(@PathVariable("name") String name) {
         return namingService.hashingFunction(name);
     }
-
 
 }

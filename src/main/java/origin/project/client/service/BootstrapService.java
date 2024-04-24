@@ -12,11 +12,13 @@ import java.io.IOException;
 public class BootstrapService {
     @Autowired
     private Node node;
+    @Autowired
+    private MessageService messageService;
     @PostConstruct
     private void startUp() {
         try {
 
-            MessageService.sendMulticastMessage(node.getNodeName(), node.getIpAddress());
+            messageService.sendMulticastMessage(node.getNodeName(), node.getIpAddress());
         }
         catch (IOException e) {
             e.printStackTrace();

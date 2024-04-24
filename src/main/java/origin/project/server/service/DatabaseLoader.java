@@ -20,8 +20,8 @@ public class DatabaseLoader {
     @Autowired
     private JsonService jsonService;
 
-    private static final String FILE_PATH = "src/main/resources/nodes.json";
-    private static final String DIRECTORY = "src/main/resources";
+    private static final String FILE_PATH = "resources/nodes.json";
+    private static final String DIRECTORY = "resources";
     private static final Logger logger = Logger.getLogger(DatabaseLoader.class.getName());
 
 

@@ -2,31 +2,33 @@ package origin.project.client.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import origin.project.client.Node;
-import origin.project.server.controller.NamingServerController;
-import origin.project.server.model.naming.NamingEntry;
-import origin.project.server.model.naming.dto.NodeRequest;
 
 import java.io.IOException;
-import java.net.*;
-import java.util.Optional;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 @Service
-public class ShutdownService {
+public class FailureService {
     @Autowired
-    private Node node;
+    Node node;
     private static final String hostnameServer = "localhost";
     private static final int portServer = 8080;
     private static final String namingServerUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
-
     private int nextID;
     private int previousID;
     private int myID;
     private InetAddress IPnext;
     private InetAddress IPprevious;
     private static final int PORT = 8888;
-    public void Shutdown(Node node) throws UnknownHostException {
+
+    /*
+    * code is idem as in shutdownservice.java
+    * move to one file to manage code replication!!!
+    */
+    public void Failure(Node node) throws UnknownHostException {
         nextID = node.getNextID();
         previousID = node.getPreviousID();
         myID = node.getCurrentID();
