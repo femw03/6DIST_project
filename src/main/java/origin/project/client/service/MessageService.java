@@ -22,7 +22,7 @@ public class MessageService {
     private static int PORT;
     private static String MULTICAST_GROUP;
     private MulticastSocket socket;
-    static Logger logger = Logger.getLogger(MessageService.class.getName());
+    Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
     public MessageService(Node node) {
@@ -110,6 +110,8 @@ public class MessageService {
                 logger.info("Current ID: " + node.getCurrentID());
                 logger.info("Next ID: " + node.getNextID());
             }
+            node.setExistingNodes(existingNodes);
+            logger.info("Existing nodes: "+node.getExistingNodes());
 
         } else {
             logger.info("Processing unicast from other node with IP address "+senderIPAddress.toString());
@@ -120,8 +122,15 @@ public class MessageService {
             int previousID = Integer.parseInt(parts[0]);
             int nextID = Integer.parseInt(parts[1]);
 
-            node.setPreviousID(previousID);
-            node.setNextID(nextID);
+            if (previousID == -1) {
+                node.setNextID(nextID);
+            } else if (nextID == -1) {
+                node.setPreviousID(previousID);
+            } else {
+                node.setPreviousID(previousID);
+                node.setNextID(nextID);
+            }
+
             logger.info("Previous ID: " + node.getPreviousID());
             logger.info("Current ID: " + node.getCurrentID());
             logger.info("Next ID: " + node.getNextID());
@@ -138,6 +147,9 @@ public class MessageService {
             throw new IOException("Invalid multicast message format");
         }
 
+        node.setExistingNodes(node.getExistingNodes()+1);
+        logger.info("Existing nodes: "+node.getExistingNodes());
+
         // parts[0] = "newNode"
         String senderName = parts[1];
         String senderIP = parts[2];
@@ -153,38 +165,33 @@ public class MessageService {
 
         // Update currentID, nextID, previousID based on the received multicast message
         if (currentHash < senderHash && senderHash <= node.getNextID()) {
-            logger.info("case 1");
             // Send response to sender with currentID and nextID information
-            sendResponse(senderIPAddress, node.getCurrentID(), node.getNextID());
+            sendMessage(senderIPAddress, node.getCurrentID(), node.getNextID());
             node.setNextID(senderHash);
         }
 
         else if (node.getPreviousID() <= senderHash && senderHash < currentHash) {
-            logger.info("case 2");
             // Send response to sender with currentID and previousID information
-            sendResponse(senderIPAddress, node.getPreviousID(), node.getCurrentID());
+            sendMessage(senderIPAddress, node.getPreviousID(), node.getCurrentID());
             node.setPreviousID(senderHash);
         }
 
         else if (node.getPreviousID() == node.getNextID() && node.getPreviousID() == node.getCurrentID()) {     // only 1 node in network
-            logger.info("case 3");
             // Send response to sender with currentID information
-            sendResponse(senderIPAddress, node.getCurrentID(), node.getCurrentID());
+            sendMessage(senderIPAddress, node.getCurrentID(), node.getCurrentID());
             node.setPreviousID(senderHash);
             node.setNextID(senderHash);
         }
 
         else if (node.getCurrentID() < node.getPreviousID()) {
-            logger.info("case 4");
             // Send response to sender with currentID information
-            sendResponse(senderIPAddress, node.getPreviousID(), node.getCurrentID());
+            sendMessage(senderIPAddress, node.getPreviousID(), node.getCurrentID());
             node.setPreviousID(senderHash);
         }
 
         else if (node.getCurrentID() > node.getNextID()) {
-            logger.info("case 5");
             // Send response to sender with currentID information
-            sendResponse(senderIPAddress, node.getCurrentID(), node.getNextID());
+            sendMessage(senderIPAddress, node.getCurrentID(), node.getNextID());
             node.setNextID(senderHash);
         }
 
@@ -193,12 +200,12 @@ public class MessageService {
         logger.info("Next ID: " + node.getNextID());
     }
 
-    private void sendResponse(InetAddress receiverIP, int currentID, int targetID) {
+    public void sendMessage(InetAddress receiverIP, int currentID, int targetID) {
         try (DatagramSocket socket = new DatagramSocket()) {
             String responseMessage = currentID + "," + targetID;
             byte[] buf = responseMessage.getBytes();
             DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, PORT);
-            logger.info("Sending response to "+receiverIP);
+            logger.info("Sending message to "+receiverIP);
             socket.send(packet);
         } catch (IOException e) {
             e.printStackTrace();
