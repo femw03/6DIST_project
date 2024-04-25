@@ -116,6 +116,7 @@ public class FileTransferService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 
     private FileLogEntry receiveFileLog() {
@@ -142,5 +143,6 @@ public class FileTransferService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 }
