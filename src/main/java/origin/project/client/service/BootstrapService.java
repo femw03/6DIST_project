@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 
 @Service
@@ -15,6 +16,7 @@ public class BootstrapService {
 
     @Autowired
     private MessageService messageService;
+    Logger logger = Logger.getLogger(BootstrapService.class.getName());
 
     @PostConstruct
     private void startUp() {

@@ -1,5 +1,6 @@
 package origin.project.client.service;
 
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -11,6 +12,7 @@ import origin.project.server.model.naming.dto.NodeRequest;
 import java.io.IOException;
 import java.net.*;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 @Service
 public class ShutdownService {
@@ -18,49 +20,58 @@ public class ShutdownService {
     private Node node;
     @Autowired
     private MessageService messageService;
-    private static final String hostnameServer = "localhost";
-    private static final int portServer = 8080;
-    private static final String namingServerUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
+    Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
-    private int nextID;
-    private int previousID;
-    private int myID;
-    private InetAddress IPnext;
-    private InetAddress IPprevious;
-    private static final int PORT = 8888;
-    public void Shutdown(Node node) throws UnknownHostException {
-        nextID = node.getNextID();
-        previousID = node.getPreviousID();
-        myID = node.getCurrentID();
+    @PreDestroy
+    public void shutdown() {
+        System.out.println("\n Initiating shutdown process... \n");
+        try {
+            int previousID = node.getPreviousID();
+            int currentID = node.getCurrentID();
+            int nextID = node.getNextID();
 
-        // next
-        String URLnext = namingServerUrl + "/get-IP-by-hash/" + nextID;
-        IPnext = InetAddress.getByName(messageService.getRequest(URLnext, "get next ip"));
+            if (node.getExistingNodes() > 1) {
+            // Next
+                String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
+                String IPnext = messageService.getRequest(URLnext, "get next ip");
+                // Because of GET request, IP is converted to string with extra double quotes ("")
+                IPnext = IPnext.replace("\"", "");              // remove double quotes
+                InetAddress IPnextInet =  InetAddress.getByName(IPnext);
 
-        // previous
-        String URLprevious = namingServerUrl + "/get-IP-by-hash/" + previousID;
-        IPprevious = InetAddress.getByName(messageService.getRequest(URLprevious, "get previous ip"));
+            // Previous
+                String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
+                String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
+                // Because of GET request, IP is converted to string with extra double quotes ("")
+                IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+                InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
-        // sending
-        sendID(IPnext,myID,previousID);
-        sendID(IPprevious,myID,nextID);
+            // Sending
+                messageService.sendMessage(IPnextInet,previousID,-1);
+                messageService.sendMessage(IPpreviousInet,-1,nextID);
+            }
 
-        // remove mine
-        String URLdelete = namingServerUrl + "/remove-node/";
-        String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
-        messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
+            // remove mine
+            String URLdelete = node.getNamingServerUrl() + "/remove-node/";
+            String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
+            messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
+            node.setExistingNodes(node.getExistingNodes()-1);
+
+        } catch (UnknownHostException e) {
+            logger.warning("Error resolving hostname or IP during shutdown: " + e.getMessage());
+            e.printStackTrace(); // Print the stack trace for detailed debugging
+        }
     }
 
     private void sendID(InetAddress receiverIP, int ID, int targetID) {
         try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress receiverAddress = receiverIP;
             String responseMessage = ID + "," + targetID;
             byte[] buf = responseMessage.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverAddress, PORT);
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, node.getMulticastPort());
             socket.send(packet);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 
 }

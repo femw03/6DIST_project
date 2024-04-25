@@ -1,6 +1,5 @@
 package origin.project.server.controller;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,12 +44,6 @@ public class NamingServerController {
     private String DIRECTORY;
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
-
-    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
-        this.namingRepository = namingRepository;
-        this.namingService = namingService;
-        this.jsonService = jsonService;
-    }
 
     @GetMapping("/all-nodes")
     public Iterable<NamingEntry> getNamingEntries() {
