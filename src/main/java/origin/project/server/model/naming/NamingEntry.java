@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.net.InetAddress;
+
 @Getter
 @Setter
 @ToString
@@ -18,9 +20,9 @@ public class NamingEntry {
     private Integer hash;
 
     @Column(nullable = false)
-    private String IP;
+    private InetAddress IP;
 
-    public NamingEntry(Integer hash, String IP) {
+    public NamingEntry(Integer hash, InetAddress IP) {
         this.hash = hash;
         this.IP = IP;
     }

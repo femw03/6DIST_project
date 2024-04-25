@@ -3,6 +3,7 @@ package origin.project.server.controller;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,9 +11,10 @@ import org.springframework.web.server.ResponseStatusException;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
-import origin.project.server.service.JsonService;
+import origin.project.server.service.JsonServiceNaming;
 import origin.project.server.service.NamingService;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,10 +32,24 @@ public class NamingServerController {
     @Autowired
     private NamingService namingService;
     @Autowired
-    private JsonService jsonService;
-    Logger logger = Logger.getLogger(NamingServerController.class.getName());
-    private static final String FILE_PATH = "src/main/resources/nodes.json";
+    private JsonServiceNaming jsonService;
 
+    @Value("${multicast.port}")
+    private int multicastPort;
+    @Value("${multicast.group}")
+    private String multicastGroup;
+    @Value("${naming.server.filepath}")
+    private String FILE_PATH;
+    @Value("${naming.server.directory}")
+    private String DIRECTORY;
+
+    Logger logger = Logger.getLogger(NamingServerController.class.getName());
+
+    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonServiceNaming jsonService) {
+        this.namingRepository = namingRepository;
+        this.namingService = namingService;
+        this.jsonService = jsonService;
+    }
 
     @GetMapping("/all-nodes")
     public Iterable<NamingEntry> getNamingEntries() {
@@ -47,7 +63,7 @@ public class NamingServerController {
     public ResponseEntity<String> addNode(@RequestBody NodeRequest nodeReq) {
         logger.info("POST: /add-node/"+ nodeReq.toString());
         String name = nodeReq.getName();
-        String ipAddress = nodeReq.getIp();
+        InetAddress ipAddress = nodeReq.getIp();
 
         if (ipAddress == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"ERROR: ip cannot be null.");
@@ -75,7 +91,7 @@ public class NamingServerController {
     @DeleteMapping("/remove-node")
     public ResponseEntity<String> removeNode(@RequestBody NodeRequest nodeRequest) {
         logger.info("DELETE: /node/" + nodeRequest.toString());
-        String ipAddress = nodeRequest.getIp();
+        InetAddress ipAddress = nodeRequest.getIp();
         String name = nodeRequest.getName();
         int hash = nodeRequest.getHash();
 
@@ -116,6 +132,21 @@ public class NamingServerController {
         return optionalEntry;
     }
 
+
+    @GetMapping("/get-IP-by-hash/{hashValue}")
+    public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
+        logger.info("GET: /get-node/"+ hashValue);
+        Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
+        if(optionalEntry.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
+        }
+
+        NamingEntry entry = optionalEntry.get();
+        InetAddress IP = entry.getIP();
+        return IP;
+    }
+
+
     @GetMapping("/get-node-by-name/{name}")
     public Optional<NamingEntry> getNode(@PathVariable("name") String name) {
         logger.info("GET: /get-node/"+ name);
@@ -128,7 +159,7 @@ public class NamingServerController {
     }
 
     @GetMapping("/file-location/{file-name}")
-    public String getFileLocation(@PathVariable("file-name") String fileName) {
+    public InetAddress getFileLocation(@PathVariable("file-name") String fileName) {
         logger.info("GET /file-location/" + fileName);
         if (namingRepository.count() < 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No nodes available in the system.");
@@ -173,12 +204,9 @@ public class NamingServerController {
 
     @GetMapping("/get-hash/{name}")
     public int getHashID(@PathVariable("name") String name) {
+        logger.info("GET /hash/" + name);
         return namingService.hashingFunction(name);
     }
 
-    @PostMapping
-    public ResponseEntity<String> respondToMulticast(@RequestBody int existingNodes) {
-        return ResponseEntity.ok("Number of existing nodes: " + existingNodes);
-    }
 
 }
