@@ -16,53 +16,37 @@ public class FailureService {
     private MessageService messageService;
     @Autowired
     Node node;
-    private static final String hostnameServer = "localhost";
-    private static final int portServer = 8080;
-    private static final String namingServerUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
-    private int nextID;
-    private int previousID;
-    private int myID;
-    private InetAddress IPnext;
-    private InetAddress IPprevious;
-    private static final int PORT = 8888;
 
     /*
     * code is idem as in shutdownservice.java
     * move to one file to manage code replication!!!
     */
-    public void Failure(Node node) throws UnknownHostException {
-        nextID = node.getNextID();
-        previousID = node.getPreviousID();
-        myID = node.getCurrentID();
+    public void Failure(Node node, MessageService messageService) throws UnknownHostException {
+        this.node = node;
+        this.messageService = messageService;
+        int nextID = node.getNextID();
+        int previousID = node.getPreviousID();
+        int myID = node.getCurrentID();
 
         // next
-        String URLnext = namingServerUrl + "/get-IP-by-hash/" + nextID;
-        IPnext = InetAddress.getByName(messageService.getRequest(URLnext, "get next ip"));
+        String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
+        String IPnext = messageService.getRequest(URLnext, "get next ip");
+        IPnext = IPnext.replace("\"", "");              // remove double quotes
+        InetAddress IPnextInet =  InetAddress.getByName(IPnext);
 
         // previous
-        String URLprevious = namingServerUrl + "/get-IP-by-hash/" + previousID;
-        IPprevious = InetAddress.getByName(messageService.getRequest(URLprevious, "get previous ip"));
+        String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
+        String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
+        IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+        InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
-        // sending
-        sendID(IPnext,myID,previousID);
-        sendID(IPprevious,myID,nextID);
+        // Sending
+        messageService.sendMessage(IPnextInet,previousID,-1);
+        messageService.sendMessage(IPpreviousInet,-1,nextID);
 
         // remove mine
-        String URLdelete = namingServerUrl + "/remove-node/";
+        String URLdelete = node.getNamingServerUrl() + "/remove-node/";
         String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
         messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
     }
-
-    private void sendID(InetAddress receiverIP, int ID, int targetID) {
-        try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress receiverAddress = receiverIP;
-            String responseMessage = ID + "," + targetID;
-            byte[] buf = responseMessage.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverAddress, PORT);
-            socket.send(packet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
 }

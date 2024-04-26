@@ -45,6 +45,12 @@ public class NamingServerController {
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
+    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
+        this.namingRepository = namingRepository;
+        this.namingService = namingService;
+        this.jsonService = jsonService;
+    }
+
     @GetMapping("/all-nodes")
     public Iterable<NamingEntry> getNamingEntries() {
         logger.info("GET: /users");

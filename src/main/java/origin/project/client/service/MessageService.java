@@ -94,7 +94,7 @@ public class MessageService {
             logger.info("Processing unicast from naming server with IP address "+senderIPAddress.toString());
             node.setNamingServerIp(senderIPAddress);
             node.setNamingServerUrl("http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/naming-server");
-
+            logger.info("naming url: " + "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/naming-server");
             if (parts.length != 3) {
                 throw new IOException("Invalid multicast message format");
             }
@@ -109,8 +109,6 @@ public class MessageService {
                 logger.info("Previous ID: " + node.getPreviousID());
                 logger.info("Current ID: " + node.getCurrentID());
                 logger.info("Next ID: " + node.getNextID());
-            } else if (existingNodes > 1) {
-                new PingService(node);
             }
             node.setExistingNodes(existingNodes);
             logger.info("Existing nodes: "+node.getExistingNodes());
@@ -147,7 +145,7 @@ public class MessageService {
         String[] parts = multicastMessage.split(",");
 
         if (parts.length != 3) {
-            throw new IOException("Invalid multicast message format");
+            throw new IOException("Invalid multicast message format"); //Look at!!!
         }
 
         node.setExistingNodes(node.getExistingNodes()+1);

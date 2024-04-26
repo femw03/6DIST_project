@@ -61,17 +61,4 @@ public class ShutdownService {
             e.printStackTrace(); // Print the stack trace for detailed debugging
         }
     }
-
-    private void sendID(InetAddress receiverIP, int ID, int targetID) {
-        try (DatagramSocket socket = new DatagramSocket()) {
-            String responseMessage = ID + "," + targetID;
-            byte[] buf = responseMessage.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, node.getMulticastPort());
-            socket.send(packet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
 }
