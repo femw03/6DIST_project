@@ -1,21 +1,33 @@
 package origin.project.client.service;
 
+import com.google.gson.Gson;
 import jakarta.annotation.PostConstruct;
-import jakarta.persistence.criteria.CriteriaBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import origin.project.client.Node;
+import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 @Service
 public class ReplicationService {
+    @Autowired
+    Node node;
 
-    @Value("${local.files.path}")
+    @Autowired
+    MessageService messageService;
+
+    @Value("${localfiles.path}")
     String FOLDER_PATH;
 
     Path baseFolder;
@@ -24,12 +36,46 @@ public class ReplicationService {
 
     ArrayList<String> fileNames;
 
+    Logger logger = Logger.getLogger(NamingServerController.class.getName());
+
+    String replicationBaseUrl;
+
     @PostConstruct
     public void init() {
+        new Thread(() -> {
+            while (!node.isDiscoveryFinished()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                actualInit();
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+
+    }
+
+    public void actualInit() throws UnknownHostException{
+        // allows for local testing
+//        System.out.println(node.getNamingServerIp());
+//        if (node.getNamingServerIp() == null) {
+//            node.setNamingServerIp(InetAddress.getByName("127.0.0.1"));
+//        }
+
         localFileFolder = new File(FOLDER_PATH);
         baseFolder = Paths.get(FOLDER_PATH);
         fileNames = new ArrayList<>();
 
+        replicationBaseUrl = "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/replication";
+
+        // verify local files and send hash-values to naming server
+        startUp();
+
+        // start update thread
     }
 
 
@@ -40,14 +86,29 @@ public class ReplicationService {
         // get current files.
         scanFolder(localFileFolder, fileNames);
 
-        ArrayList<Integer> hashedFileNames = new ArrayList<>();
+        logger.info("Found following files: " + fileNames);
+
+        Map<String, Integer> hashedFileNames = new HashMap<>();
 
         // hash fileNames
         for (String fileName : fileNames) {
-            hashedFileNames.add(hashingFunction(fileName));
+            hashedFileNames.put(fileName, hashingFunction(fileName));
         }
 
+        // Convert array to JSON
+        String hashedFileNamesJSON = new Gson().toJson(hashedFileNames);
+
         // report hashedFileNames to Naming Server
+        logger.info("hashed FileNames JSON" + hashedFileNamesJSON);
+
+        String replicationEndpoint = replicationBaseUrl + "/initial-list";
+        logger.info("Endpoint for the initial list post-request: " + replicationEndpoint);
+
+        String replicationMap = messageService.postRequest(replicationEndpoint, hashedFileNamesJSON,"Initial local files list");
+        logger.info("Replication map returned by server : " + replicationMap);
+
+
+
 
     }
 
