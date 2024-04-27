@@ -162,26 +162,12 @@ public class NamingServerController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ERROR: name cannot be null.");
         }
         int fileHash = namingService.hashingFunction(fileName);
-        ArrayList<NamingEntry> nodesWithHashSmallerThanFile = (ArrayList<NamingEntry>) namingRepository.findByHashLessThan(fileHash);
 
-        if (nodesWithHashSmallerThanFile.isEmpty()) {
-            // If no nodes with hash smaller than file hash, find the node with the biggest hash
-            Optional<NamingEntry> ownerNodeOptional = namingRepository.findEntryWithLargestHash();
-            if (ownerNodeOptional.isPresent()) {
-                NamingEntry ownerNode = ownerNodeOptional.get();
-                logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
-                return ownerNode.getIP();
-            }
-            else {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, ".");
-            }
-        }
-        else {
-            // Find the node with the smallest difference between its hash and the file hash
-            NamingEntry ownerNode = namingService.findNearestNodeId(fileHash,nodesWithHashSmallerThanFile);
-            logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
-            return ownerNode.getIP();
-        }
+        InetAddress ownerNode = namingService.findOwner(fileHash);
+
+        logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
+
+        return ownerNode;
 
     }
 
