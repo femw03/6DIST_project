@@ -95,6 +95,8 @@ public class MessageService {
             node.setNamingServerIp(senderIPAddress);
             node.setNamingServerUrl("http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/naming-server");
 
+            node.setDiscoveryFinished(true);
+
             if (parts.length != 3) {
                 throw new IOException("Invalid multicast message format");
             }

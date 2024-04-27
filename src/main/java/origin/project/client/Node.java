@@ -43,6 +43,8 @@ public class Node {
     private int nextID=-1;
     private int previousID=-1;
 
+    private boolean discoveryFinished = false;
+
     private int existingNodes=0;
     Logger logger = Logger.getLogger(Node.class.getName());
 
