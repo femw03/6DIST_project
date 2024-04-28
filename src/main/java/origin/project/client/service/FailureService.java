@@ -9,6 +9,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 @Service
 public class FailureService {
@@ -16,37 +18,54 @@ public class FailureService {
     private MessageService messageService;
     @Autowired
     Node node;
+    Logger logger = Logger.getLogger(FailureService.class.getName());
 
-    /*
-    * code is idem as in shutdownservice.java
-    * move to one file to manage code replication!!!
-    */
-    public void Failure(Node node, MessageService messageService) throws UnknownHostException {
-        this.node = node;
-        this.messageService = messageService;
+    public void Failure(String IPaddress) throws UnknownHostException, InterruptedException {
         int nextID = node.getNextID();
         int previousID = node.getPreviousID();
-        int myID = node.getCurrentID();
 
         // next
         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
         String IPnext = messageService.getRequest(URLnext, "get next ip");
         IPnext = IPnext.replace("\"", "");              // remove double quotes
-        InetAddress IPnextInet =  InetAddress.getByName(IPnext);
 
         // previous
         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
         String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
         IPprevious = IPprevious.replace("\"", "");              // remove double quotes
-        InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
-        // Sending
-        messageService.sendMessage(IPnextInet,previousID,-1);
-        messageService.sendMessage(IPpreviousInet,-1,nextID);
+        if (Objects.equals(IPaddress, IPprevious) && Objects.equals(IPaddress, IPnext)) {       // only 1 node left in network
+            node.setPreviousID(node.getCurrentID());
+            node.setNextID(node.getCurrentID());
+            logger.info("Previous ID: " + node.getPreviousID());
+            logger.info("Current ID: " + node.getCurrentID());
+            logger.info("Next ID: " + node.getNextID());
 
-        // remove mine
+        } else if (Objects.equals(IPaddress, IPprevious)) {
+            node.setPreviousID(-1);
+            // send multicast
+            String message = "Discover previous," + node.getCurrentID();
+            // Wait until everyone discovered failed connection
+            Thread.sleep(10000); // 10 seconds delay
+            messageService.sendMulticastMessage(message);
+
+        } else if (Objects.equals(IPaddress, IPnext)) {
+            node.setNextID(-1);
+            // send multicast
+            String message = "Discover next," + node.getCurrentID();
+            // Wait until everyone discovered failed connection
+            Thread.sleep(10000); // 10 seconds delay
+            messageService.sendMulticastMessage(message);
+        }
+
+        // remove failed node
+        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + IPaddress;
+        int hashID = Integer.parseInt(messageService.getRequest(URLhash, "get hashID"));
+
         String URLdelete = node.getNamingServerUrl() + "/remove-node/";
-        String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
+        String nodeBody = "{\"hash\" : \"" + hashID + "\", \"ip\" : \"" + IPaddress + "\"}" ;
         messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
+        node.setExistingNodes(node.getExistingNodes()-1);
     }
+
 }

@@ -27,7 +27,6 @@ public class ShutdownService {
         System.out.println("\n Initiating shutdown process... \n");
         try {
             int previousID = node.getPreviousID();
-            int currentID = node.getCurrentID();
             int nextID = node.getNextID();
 
             if (node.getExistingNodes() > 1) {
@@ -50,7 +49,7 @@ public class ShutdownService {
                 messageService.sendMessage(IPpreviousInet,-1,nextID);
             }
 
-            // remove mine
+            // remove node
             String URLdelete = node.getNamingServerUrl() + "/remove-node/";
             String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
             messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
@@ -59,6 +58,8 @@ public class ShutdownService {
         } catch (UnknownHostException e) {
             logger.warning("Error resolving hostname or IP during shutdown: " + e.getMessage());
             e.printStackTrace(); // Print the stack trace for detailed debugging
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 }

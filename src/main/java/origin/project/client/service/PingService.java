@@ -16,101 +16,64 @@ public class PingService {
     private Node node;
     @Autowired
     private MessageService messageService;
+    @Autowired
+    private FailureService failureService;
     private int PORT;
     private String MULTICAST_GROUP;
-    private InetAddress IPnext;
-    private InetAddress IPprevious;
-    //private String namingServerUrl;
-    private MulticastSocket socket;
     static Logger logger = Logger.getLogger(PingService.class.getName());
 
-    public PingService(Node node) throws IOException {
+    public PingService(Node node) {
         this.node = node;
         this.PORT = node.getMulticastPort();
         this.MULTICAST_GROUP = node.getMulticastGroup();
-        //this.namingServerUrl = node.getNamingServerUrl();
-        //this.messageService = messageService;
 
-        /*while (!initiated) { // Test!!!
-            if (node.getExistingNodes() > 1) {
-                initiated = true;
-                logger.info("I am here!!!");
-                new Thread(this::Ping).start();
-            }
-        }*/
         new Thread(this::Ping).start();
     }
 
     public void Ping() {
         while(true){
             try {
-                Thread.sleep(5000); // 5000 milliseconds = 5 seconds
-            } catch (InterruptedException e) {
+                int nextID = node.getNextID();
+                int previousID = node.getPreviousID();
+
+                if (node.getExistingNodes() > 1) {
+                    // next
+                    if (nextID != -1) {
+                        String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
+                        String IPnext = messageService.getRequest(URLnext, "get next ip");
+                        IPnext = IPnext.replace("\"", "");              // remove double quotes
+                        InetAddress IPnextInet = InetAddress.getByName(IPnext);
+                        //PING
+                        pingNode(IPnextInet);
+                    }
+
+                    // previous
+                    if (previousID != -1) {
+                        String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
+                        String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
+                        IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+                        InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
+                        //PING
+                        pingNode(IPpreviousInet);
+                    }
+
+                }
+            } catch (InterruptedException | UnknownHostException e) {
                 e.printStackTrace();
             }
-
-            if (node.getExistingNodes() > 1) {
-                    try {
-                        logger.info("I am here (PING PING)!!!");
-                        int nextID = node.getNextID();
-                        int previousID = node.getPreviousID();
-                        int myID = node.getCurrentID();
-
-                        // ???
-                        if (nextID != -1 && previousID != -1 && myID != -1) {
-                            // next
-                            String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
-                            String IPnext = messageService.getRequest(URLnext, "get next ip");
-                            IPnext = IPnext.replace("\"", "");              // remove double quotes
-                            InetAddress IPnextInet =  InetAddress.getByName(IPnext);
-
-                            // previous
-                            String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
-                            String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
-                            IPprevious = IPprevious.replace("\"", "");              // remove double quotes
-                            InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
-
-                            logger.info("url request ping : " + node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID);
-
-                            //send
-                            sendPing(IPnext);
-                            sendPing(IPprevious);
-                        } else {
-                            logger.info("nextID: " + nextID + " previousID: " + previousID + " myID: " + myID);
-                            // Find way to make him wait on response from server!!!
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                //}
-            }
         }
     }
 
-    /*
-    * java.io.IOException: Invalid multicast message format
-        at origin.project.client.service.MessageService.processUnicastMessage(MessageService.java:120)
-        at origin.project.client.service.MessageService.processMessage(MessageService.java:87)
-        at origin.project.client.service.MessageService.receiveMessage(MessageService.java:68)
-        at java.base/java.lang.Thread.run(Thread.java:833)
-        *
-        * ???
-    * */
-    private void sendPing(String receiverIP) throws UnknownHostException {
-        try (DatagramSocket socket = new DatagramSocket()) {
-            System.out.println("IP address in sendPing method: " + receiverIP);
-            InetAddress receiverAddress = InetAddress.getByName(receiverIP);
-            String responseMessage = "hello";
-            byte[] buf = responseMessage.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverAddress, PORT);
-            socket.send(packet);
+    public void pingNode(InetAddress receiverIP) throws UnknownHostException, InterruptedException {
+        try (Socket socket = new Socket()) {
+            Thread.sleep(2500); // 2.5 seconds
+            //logger.info("Sending PING to "+receiverIP.getHostAddress());
+            socket.connect(new InetSocketAddress(receiverIP.getHostName(), node.getNodePort()), 30);
         } catch (IOException e) {
-            try {
-                new FailureService().Failure(node,messageService); //???
-            } catch (UnknownHostException ex) {
-                throw new RuntimeException(ex);
-            }
-            e.printStackTrace();
+            // Connection failed, handle the exception or throw it further
+            logger.info("Failed to connect to node: "+ receiverIP.getHostAddress());
+            failureService.Failure(receiverIP.getHostAddress());
         }
     }
+
 }

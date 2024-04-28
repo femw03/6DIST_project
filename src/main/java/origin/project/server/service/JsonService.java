@@ -23,6 +23,7 @@ public class JsonService {
     public List<NamingEntry> loadNamingEntriesFromJsonFile(String filePath) {
         try {
             FileReader reader = new FileReader(filePath);
+
             Gson gson = new Gson();
 
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
