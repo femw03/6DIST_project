@@ -41,7 +41,7 @@ public class FileTransferService {
         try {
             // Create a socket object
             Socket socket  = new Socket();
-            socket.connect(new InetSocketAddress(nodeIP, node.getFileTransferPort()));
+            socket.connect(new InetSocketAddress(nodeIP, node.getNodePort()));
             OutputStream os = socket.getOutputStream();
 
             // Read the file and create an inputStream
@@ -68,7 +68,7 @@ public class FileTransferService {
     private void sendFileLog(String fileName, String nodeIP) {
         try {
             // Create a socket object
-            Socket socket  = new Socket(nodeIP, node.getFileLogTransferPort());
+            Socket socket  = new Socket(nodeIP, node.getNodePort());
             OutputStream os = socket.getOutputStream();
 
             // Read the fileEntry and transform it to a jsonFile
@@ -90,7 +90,7 @@ public class FileTransferService {
     private void receiveFileData(String fileName) {
         try {
             // Create a server socket to receive the file
-            ServerSocket serverSocket = new ServerSocket(node.getFileTransferPort());
+            ServerSocket serverSocket = new ServerSocket(node.getNodePort());
             Socket socket = serverSocket.accept();
             InputStream inputStream = socket.getInputStream();
 
@@ -119,7 +119,7 @@ public class FileTransferService {
     private FileLogEntry receiveFileLog() {
         try {
             // We open a new socket
-            ServerSocket serverSocket = new ServerSocket(node.getFileLogTransferPort());
+            ServerSocket serverSocket = new ServerSocket(node.getNodePort());
             Socket socket = serverSocket.accept();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
