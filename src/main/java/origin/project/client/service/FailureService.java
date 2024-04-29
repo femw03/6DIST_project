@@ -62,7 +62,7 @@ public class FailureService {
         String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + IPaddress;
         int hashID = Integer.parseInt(messageService.getRequest(URLhash, "get hashID"));
 
-        String URLdelete = node.getNamingServerUrl() + "/remove-node/";
+        String URLdelete = node.getNamingServerUrl() + "/remove-node";
         String nodeBody = "{\"hash\" : \"" + hashID + "\", \"ip\" : \"" + IPaddress + "\"}" ;
         messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
         node.setExistingNodes(node.getExistingNodes()-1);

@@ -41,6 +41,7 @@ public class Node {
     private int nextID=-1;
     private int previousID=-1;
     private int existingNodes=0;
+    private boolean pingEnable=false;
 
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);
