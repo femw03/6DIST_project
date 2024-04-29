@@ -127,7 +127,6 @@ public class MessageService {
 
             // Disable ping while updating node IDs
             node.setPingEnable(false);
-            logger.info("PING: "+node.isPingEnable());
 
             if (parts.length != 2) {
                 throw new IOException("Invalid multicast message format");
@@ -165,7 +164,6 @@ public class MessageService {
             // Enable ping
             Thread.sleep(2000);         // wait until IDs are updated
             node.setPingEnable(true);
-            logger.info("PING: "+node.isPingEnable());
         }
 
     }
@@ -174,7 +172,6 @@ public class MessageService {
         logger.info("Processing multicast from other node with IP address "+senderIPAddress.toString());
         // Extract sender's name and IP address from the message
         String[] parts = multicastMessage.split(",");
-        logger.info("PING: "+node.isPingEnable());
 
         // Disable ping while updating node IDs
         node.setPingEnable(false);
@@ -238,7 +235,6 @@ public class MessageService {
         // Enable ping
         Thread.sleep(2000);         // wait until IDs are updated
         node.setPingEnable(true);
-        logger.info("PING: "+node.isPingEnable());
     }
 
     private void processDiscoveryMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {

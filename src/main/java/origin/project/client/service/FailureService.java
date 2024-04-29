@@ -23,6 +23,7 @@ public class FailureService {
     public void Failure(String IPaddress) throws UnknownHostException, InterruptedException {
         int nextID = node.getNextID();
         int previousID = node.getPreviousID();
+        logger.info("nodes: "+node.getExistingNodes());
 
         // next
         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
@@ -40,6 +41,7 @@ public class FailureService {
             logger.info("Previous ID: " + node.getPreviousID());
             logger.info("Current ID: " + node.getCurrentID());
             logger.info("Next ID: " + node.getNextID());
+            node.setPingEnable(true);
 
         } else if (Objects.equals(IPaddress, IPprevious)) {
             node.setPreviousID(-1);
@@ -59,13 +61,22 @@ public class FailureService {
         }
 
         // remove failed node
-        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + IPaddress;
-        int hashID = Integer.parseInt(messageService.getRequest(URLhash, "get hashID"));
+        String URLnode = node.getNamingServerUrl() + "/get-node/" + IPaddress;
+        boolean nodeExists = Boolean.parseBoolean(messageService.getRequest(URLnode, "get node"));
 
-        String URLdelete = node.getNamingServerUrl() + "/remove-node";
-        String nodeBody = "{\"hash\" : \"" + hashID + "\", \"ip\" : \"" + IPaddress + "\"}" ;
-        messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
-        node.setExistingNodes(node.getExistingNodes()-1);
+        if (nodeExists) {
+            String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + IPaddress;
+            String hashIDString = messageService.getRequest(URLhash, "get hashID");
+            logger.info("Removing node "+IPaddress);
+            int hashID = Integer.parseInt(hashIDString);
+            String URLdelete = node.getNamingServerUrl() + "/remove-node";
+            String nodeBody = "{\"hash\" : \"" + hashID + "\", \"ip\" : \"" + IPaddress + "\"}" ;
+            messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
+        } else {
+            logger.info("Node "+IPaddress+" already removed");
+        }
+
+
     }
 
 }

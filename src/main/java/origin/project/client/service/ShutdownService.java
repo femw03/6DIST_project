@@ -3,9 +3,15 @@ package origin.project.client.service;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import origin.project.client.Node;
+import origin.project.server.controller.NamingServerController;
+import origin.project.server.model.naming.NamingEntry;
+import origin.project.server.model.naming.dto.NodeRequest;
 
+import java.io.IOException;
 import java.net.*;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 @Service

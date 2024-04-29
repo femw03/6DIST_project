@@ -124,10 +124,10 @@ public class NamingServerController {
     }
 
     @GetMapping("/get-node-by-hash/{hashValue}")
-    public Optional<NamingEntry> getNode(@PathVariable("hashValue") int hashValue) {
+    public Optional<NamingEntry> getNodeByHash(@PathVariable("hashValue") int hashValue) {
         logger.info("GET: /get-node-by-hash/"+ hashValue);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
         }
         return optionalEntry;
@@ -138,7 +138,7 @@ public class NamingServerController {
     public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
         logger.info("GET: /get-IP-by-hash/"+ hashValue);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
         }
         NamingEntry entry = optionalEntry.get();
@@ -149,7 +149,7 @@ public class NamingServerController {
     public int getHash(@PathVariable("IPaddress") String IPaddress) throws UnknownHostException {
         logger.info("GET: /get-hash-by-IP/"+ IPaddress);
         Optional<NamingEntry> optionalEntry = namingRepository.findByIP(InetAddress.getByName(IPaddress));
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"IP not found!");
         }
         NamingEntry entry = optionalEntry.get();
@@ -158,14 +158,25 @@ public class NamingServerController {
 
 
     @GetMapping("/get-node-by-name/{name}")
-    public Optional<NamingEntry> getNode(@PathVariable("name") String name) {
+    public Optional<NamingEntry> getNodeByName(@PathVariable("name") String name) {
         logger.info("GET: /get-node-by-name/"+ name);
         int hashValue = namingService.hashingFunction(name);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Name not found!");
         }
         return optionalEntry;
+    }
+
+    @GetMapping("/get-node/{ip}")
+    public boolean getNode(@PathVariable("ip") String ip) throws UnknownHostException {
+        logger.info("GET: /get-node/"+ ip);
+        boolean inRepository = false;
+        Optional<NamingEntry> optionalEntry = namingRepository.findByIP(InetAddress.getByName(ip));
+        if (optionalEntry.isPresent()) {
+            inRepository=true;
+        }
+        return inRepository;
     }
 
     @GetMapping("/file-location/{file-name}")

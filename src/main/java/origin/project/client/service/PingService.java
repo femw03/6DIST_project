@@ -36,31 +36,15 @@ public class PingService {
         int temp = node.getExistingNodes(); // test
         while(true){
             try {
+                Thread.sleep(2500); // 2.5 seconds
                 int nextID = node.getNextID();
                 int previousID = node.getPreviousID();
-                if (i<1000000000) {
-                    i++;
-                } else {
-                    logger.info("nodes: "+node.getExistingNodes());
-                    logger.info("PING: "+node.isPingEnable());
-                    i=0;
-                }
+                //logger.info("nodes: "+node.getExistingNodes());
 
-                // Thread.sleep(2500); // 2.5 seconds
                 if (node.getExistingNodes() > 1 && node.isPingEnable()) {
-                    //if (node.getExistingNodes() != 1 && node.isPingEnable()) {
-                    Thread.sleep(2500); // 2.5 seconds
-                    //logger.info("nodes: "+node.getExistingNodes());
-                    //logger.info("PING: "+node.isPingEnable());
-                    //logger.info("previous: "+ node.getPreviousID());
-                    //logger.info("next: "+ node.getNextID());
-
-                    nextID = node.getNextID();
-                    previousID = node.getPreviousID();
-                    temp = node.getExistingNodes(); // test
 
                     // next
-                    if (nextID != -1) {
+                    if (nextID != -1 && node.getExistingNodes() > 1) { //added check for existing node count. Reason, seems to get into big if statement sometimes when he shouldn't
                         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
                         String IPnext = messageService.getRequest(URLnext, "get next ip");
                         IPnext = IPnext.replace("\"", "");              // remove double quotes
@@ -70,7 +54,7 @@ public class PingService {
                     }
 
                     // previous
-                    if (previousID != -1) {
+                    if (previousID != -1 && node.getExistingNodes() > 1) {
                         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
                         String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
                         IPprevious = IPprevious.replace("\"", "");              // remove double quotes
@@ -90,15 +74,12 @@ public class PingService {
         try (Socket socket = new Socket()) {
             //Thread.sleep(2500); // 2.5 seconds
             logger.info("Sending PING to "+receiverIP.getHostAddress());
-            logger.info("nodes: "+node.getExistingNodes());
-            logger.info("PING: "+node.isPingEnable());
-            logger.info("previous: "+ node.getPreviousID());
-            logger.info("next: "+ node.getNextID());
             socket.connect(new InetSocketAddress(receiverIP.getHostName(), node.getNodePort()), 30);
         } catch (IOException e) {
             // Connection failed, handle the exception or throw it further
             logger.info("Failed to connect to node: "+ receiverIP.getHostAddress());
             node.setPingEnable(false);
+            node.setExistingNodes(node.getExistingNodes()-1);           // Update active node count
             failureService.Failure(receiverIP.getHostAddress());
         }
     }
