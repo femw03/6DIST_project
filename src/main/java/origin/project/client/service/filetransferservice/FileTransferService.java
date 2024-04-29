@@ -6,6 +6,7 @@ import origin.project.client.Node;
 import origin.project.client.service.MessageService;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -30,25 +31,27 @@ public class FileTransferService {
     public void receiveFile() {
         while (true) {
             FileLogEntry fileLogEntry = receiveFileLog();
-            File file = receiveFileData(fileLogEntry.getFileName());
+            if (fileLogEntry != null) {
+                receiveFileData(fileLogEntry.getFileName());
+            }
         }
     }
 
-    private void sendFileData(String filename, String nodeIP) {
+    private void sendFileData(String fileName, String nodeIP) {
         try {
             // Create a socket object
-            Socket socket  = new Socket(nodeIP, node.getFileTransferPort());
+            Socket socket  = new Socket();
+            socket.connect(new InetSocketAddress(nodeIP, node.getFileTransferPort()));
             OutputStream os = socket.getOutputStream();
 
             // Read the file and create an inputStream
-            File file = new File(filename);
-            FileInputStream fileInputStream = new FileInputStream(file); // To read content of file in bytes format
+            FileInputStream fileInputStream = new FileInputStream(fileName); // To read content of file in bytes format
 
             // Write teh files in bytes
-            byte[] byteArray = new byte[1024];
-            int longLen;
-            while ((longLen = fileInputStream.read(byteArray)) > 0) {
-                os.write(byteArray, 0, longLen);
+            byte[] byteArray = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fileInputStream.read(byteArray)) > 0) {
+                os.write(byteArray, 0, bytesRead);
             }
             // Flush and close output stream
             os.flush();
@@ -60,7 +63,6 @@ public class FileTransferService {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private void sendFileLog(String fileName, String nodeIP) {
@@ -85,7 +87,7 @@ public class FileTransferService {
         }
     }
 
-    private File receiveFileData(String fileName) {
+    private void receiveFileData(String fileName) {
         try {
             // Create a server socket to receive the file
             ServerSocket serverSocket = new ServerSocket(node.getFileTransferPort());
@@ -93,13 +95,12 @@ public class FileTransferService {
             InputStream inputStream = socket.getInputStream();
 
             // Create a file where all the data will be written to
-            File file = new File(fileName);
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            FileOutputStream fileOutputStream = new FileOutputStream(fileName);
 
-            byte[] byteArray = new byte[1024];
-            int longLen;
-            while ((longLen = inputStream.read(byteArray)) > 0) {
-                fileOutputStream.write(byteArray, 0, longLen);
+            byte[] byteArray = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(byteArray)) > 0) {
+                fileOutputStream.write(byteArray, 0, bytesRead);
             }
 
             // Flush and close output stream
@@ -110,13 +111,9 @@ public class FileTransferService {
             inputStream.close();
             socket.close();
 
-            // We return the received file
-            return file;
-
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
     }
 
     private FileLogEntry receiveFileLog() {
