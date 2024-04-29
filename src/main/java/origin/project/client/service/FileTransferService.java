@@ -1,9 +1,9 @@
-package origin.project.client.service.filetransferservice;
+package origin.project.client.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
-import origin.project.client.service.MessageService;
+import origin.project.client.service.filelogs.FileLogEntry;
 
 import java.io.*;
 import java.net.InetSocketAddress;

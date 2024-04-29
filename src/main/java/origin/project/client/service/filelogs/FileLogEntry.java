@@ -1,4 +1,4 @@
-package origin.project.client.service.filetransferservice;
+package origin.project.client.service.filelogs;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

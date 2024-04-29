@@ -8,7 +8,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class NodeRunnable {
 
     public static void main(String[] args) {
-
         // Check if enough arguments are provided
         /*if (args.length < 2) {
             System.out.println("Usage: java -jar your-application.jar <nodeName> <ipAddress>");
@@ -24,6 +23,7 @@ public class NodeRunnable {
         // Set the arguments as system properties (optional but can be useful)
         System.setProperty("nodeName", nodeName);
         System.setProperty("ipAddress", ipAddress);
+        System.setProperty("server.port", "-1");
 
         SpringApplication.run(origin.project.client.NodeRunnable.class, args);
 

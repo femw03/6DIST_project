@@ -1,10 +1,7 @@
-package origin.project.client.service.filetransferservice;
+package origin.project.client.service.filelogs;
 
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-import origin.project.server.model.naming.NamingEntry;
-
-import java.util.List;
 
 
 @Repository

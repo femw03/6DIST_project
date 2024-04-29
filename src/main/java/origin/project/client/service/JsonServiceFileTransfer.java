@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
-import origin.project.client.service.filetransferservice.FileLogEntry;
+import origin.project.client.service.filelogs.FileLogEntry;
 
 import java.io.FileReader;
 import java.io.FileWriter;
