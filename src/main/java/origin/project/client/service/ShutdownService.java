@@ -17,7 +17,7 @@ public class ShutdownService {
     private MessageService messageService;
     Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
-    //@PreDestroy
+    @PreDestroy
     public void shutdown() {
         System.out.println("\n Initiating shutdown process... \n");
         try {
