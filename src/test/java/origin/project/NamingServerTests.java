@@ -1,4 +1,6 @@
-package origin.project.client;
+package origin.project;
+
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -8,10 +10,24 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-public class NamingServerClient {
+@SpringBootTest
+class NamingServerTests {
+
     private String serverBaseUrl;
 
-    public NamingServerClient(String hostnameServer, int portServer) {
+    public static void main(String[] args) {
+        if (args.length < 2) {
+            System.out.println("Syntax: provide parameter \"hostname server\" \"port server\"");
+            return;
+        }
+
+        String hostname = args[0];
+        int port = Integer.parseInt(args[1]);
+
+        new NamingServerTests(hostname, port);
+    }
+
+    public NamingServerTests(String hostnameServer, int portServer) {
         // base-url of server. e.g., localhost:8080
         this.serverBaseUrl = "http://" + hostnameServer + ":" + portServer + "/naming-server";
 
@@ -20,42 +36,33 @@ public class NamingServerClient {
 
     private void run() {
         // print all the nodes
-        System.out.println(getAllNodes());
+        System.out.println("All nodes: "+getAllNodes());
 
         // Add nodes
         System.out.println(addNode("node2", "192.168.1.71"));
         System.out.println(addNode("node4", "192.168.1.51"));
-        int hashNode = addNode("node6", "192.168.1.21");
-        System.out.println(hashNode);
-//
+        System.out.println(addNode("node6", "192.168.1.21"));
+
         // print all the nodes
-        System.out.println(getAllNodes());
+        System.out.println("All nodes: "+getAllNodes());
 
         // get a loction fo a file
-        System.out.println(getFileLocation("document1.txt"));
+        System.out.println("Get location of file 'document1.txt': "+getFileLocation("document1.txt"));
 
         // remove some nodes
         removeNodeThroughName("192.168.1.71", "node2");
+        System.out.println("Removed node2: "+getAllNodes());
         removeNodeThroughName("192.168.1.51", "node4");
+        System.out.println("Removed node4: "+getAllNodes());
         removeNodeThroughHash("192.168.1.21", String.valueOf(4724));
-
-        System.out.println(getAllNodes());
-//
-//        // print all the nodes
-//        System.out.println(getAllNodes());
-//
-//
-//
-//        // clear the repository
-//        System.out.println(clearRepository());
-
+        System.out.println("Removed node6: "+getAllNodes());
     }
 
 
-    private int addNode(String nodeName, String ipAddress) {
+    private String addNode(String nodeName, String ipAddress) {
         String addNodeEndpoint = serverBaseUrl + "/add-node";
         String addNodeBody = "{\"name\" : \"" + nodeName + "\", \"ip\" : \"" + ipAddress + "\"}" ;
-        return Integer.parseInt(postRequest(addNodeEndpoint, addNodeBody, "addNode"));
+        return postRequest(addNodeEndpoint, addNodeBody, "addNode");
     }
 
     private void removeNodeThroughName(String ipAddress, String name) {
@@ -213,4 +220,5 @@ public class NamingServerClient {
             throw new RuntimeException(e);
         }
     }
+
 }

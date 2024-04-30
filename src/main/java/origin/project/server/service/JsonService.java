@@ -1,10 +1,10 @@
-package origin.project.naming.service;
+package origin.project.server.service;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.springframework.stereotype.Service;
-import origin.project.naming.controller.NamingServerController;
-import origin.project.naming.model.naming.NamingEntry;
+import origin.project.server.controller.NamingServerController;
+import origin.project.server.model.naming.NamingEntry;
 
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -36,9 +36,9 @@ public class JsonService {
                 return null;
 
             return List.of(objects);
-            // Convert array to list
+
         } catch (IOException e) {
-            logger.info("failed to load entries from JSON-file. file: " + filePath);
+            logger.info("Failed to load entries from JSON-file. file: " + filePath);
             return null;
         }
     }
@@ -50,10 +50,9 @@ public class JsonService {
             Gson gson = new Gson();
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
 
+            // append new entry
             List<NamingEntry> originalList = new ArrayList<>();
-
             if (objects != null) {
-                // append new entry
                 originalList = new ArrayList<>(List.of(objects));
 
             }
@@ -78,7 +77,7 @@ public class JsonService {
             Gson gson = new Gson();
             NamingEntry[] objects = gson.fromJson(reader, NamingEntry[].class);
 
-            // append new entry
+            // remove entry
             List<NamingEntry> originalList = new ArrayList<>(List.of(objects));
             originalList.removeIf(e -> Objects.equals(e.getHash(), entry.getHash()) && Objects.equals(e.getIP(), entry.getIP()));
 

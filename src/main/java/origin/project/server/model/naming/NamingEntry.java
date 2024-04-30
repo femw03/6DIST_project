@@ -1,4 +1,4 @@
-package origin.project.naming.model.naming;
+package origin.project.server.model.naming;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,6 +7,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.net.InetAddress;
 
 @Getter
 @Setter
@@ -18,9 +20,9 @@ public class NamingEntry {
     private Integer hash;
 
     @Column(nullable = false)
-    private String IP;
+    private InetAddress IP;
 
-    public NamingEntry(Integer hash, String IP) {
+    public NamingEntry(Integer hash, InetAddress IP) {
         this.hash = hash;
         this.IP = IP;
     }
