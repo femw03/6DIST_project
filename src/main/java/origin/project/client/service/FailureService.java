@@ -4,10 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -23,7 +19,7 @@ public class FailureService {
     public void Failure(String IPaddress) throws UnknownHostException, InterruptedException {
         int nextID = node.getNextID();
         int previousID = node.getPreviousID();
-        logger.info("nodes: "+node.getExistingNodes());
+        logger.info("Existing nodes: "+node.getExistingNodes());
 
         // next
         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
@@ -45,7 +41,6 @@ public class FailureService {
 
         } else if (Objects.equals(IPaddress, IPprevious)) {
             node.setPreviousID(-1);
-            // send multicast
             String message = "Discover previous," + node.getCurrentID();
             // Wait until everyone discovered failed connection
             Thread.sleep(10000); // 10 seconds delay
@@ -53,14 +48,13 @@ public class FailureService {
 
         } else if (Objects.equals(IPaddress, IPnext)) {
             node.setNextID(-1);
-            // send multicast
             String message = "Discover next," + node.getCurrentID();
             // Wait until everyone discovered failed connection
             Thread.sleep(10000); // 10 seconds delay
             messageService.sendMulticastMessage(message);
         }
 
-        // remove failed node
+        // Remove failed node
         String URLnode = node.getNamingServerUrl() + "/get-node/" + IPaddress;
         boolean nodeExists = Boolean.parseBoolean(messageService.getRequest(URLnode, "get node"));
 

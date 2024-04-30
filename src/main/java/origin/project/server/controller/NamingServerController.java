@@ -83,7 +83,6 @@ public class NamingServerController {
         }
 
         NamingEntry namingEntry = new NamingEntry(hash, ipAddress);
-        //System.out.println(namingEntry.getIP());
         jsonService.addEntryToJsonFile(FILE_PATH, namingEntry);
         namingRepository.save(namingEntry);
         return ResponseEntity.ok("Node with hashID "+ hash + " successfully created!");

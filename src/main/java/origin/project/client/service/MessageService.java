@@ -123,7 +123,6 @@ public class MessageService {
 
         } else {
             logger.info("Processing unicast from other node with IP address "+senderIPAddress.toString());
-            logger.info("PING: "+node.isPingEnable());
 
             // Disable ping while updating node IDs
             node.setPingEnable(false);

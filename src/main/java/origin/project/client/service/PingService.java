@@ -6,7 +6,6 @@ import origin.project.client.Node;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.Objects;
 import java.util.logging.Logger;
 
 
@@ -18,33 +17,26 @@ public class PingService {
     private MessageService messageService;
     @Autowired
     private FailureService failureService;
-    private int PORT;
-    private String MULTICAST_GROUP;
     static Logger logger = Logger.getLogger(PingService.class.getName());
     int i;
 
     public PingService(Node node) {
         this.node = node;
-        this.PORT = node.getMulticastPort();
-        this.MULTICAST_GROUP = node.getMulticastGroup();
-        this.i=0;
 
         new Thread(this::Ping).start();
     }
 
     public void Ping() {
-        int temp = node.getExistingNodes(); // test
         while(true){
             try {
                 Thread.sleep(2500); // 2.5 seconds
                 int nextID = node.getNextID();
                 int previousID = node.getPreviousID();
-                //logger.info("nodes: "+node.getExistingNodes());
 
                 if (node.getExistingNodes() > 1 && node.isPingEnable()) {
 
                     // next
-                    if (nextID != -1 && node.getExistingNodes() > 1) { //added check for existing node count. Reason, seems to get into big if statement sometimes when he shouldn't
+                    if (nextID != -1 && node.getExistingNodes() > 1) { //added check for existing node count, because seems to get into 'if statement' sometimes when he shouldn't
                         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
                         String IPnext = messageService.getRequest(URLnext, "get next ip");
                         IPnext = IPnext.replace("\"", "");              // remove double quotes
@@ -72,7 +64,6 @@ public class PingService {
 
     public void pingNode(InetAddress receiverIP) throws UnknownHostException, InterruptedException {
         try (Socket socket = new Socket()) {
-            //Thread.sleep(2500); // 2.5 seconds
             logger.info("Sending PING to "+receiverIP.getHostAddress());
             socket.connect(new InetSocketAddress(receiverIP.getHostName(), node.getNodePort()), 30);
         } catch (IOException e) {
