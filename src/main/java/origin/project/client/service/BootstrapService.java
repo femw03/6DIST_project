@@ -21,7 +21,8 @@ public class BootstrapService {
     @PostConstruct
     private void startUp() {
         try {
-            messageService.sendMulticastMessage(node.getNodeName(), node.getIpAddress());
+            String message = "newNode," + node.getNodeName() + "," + node.getIpAddress(); // Combine name and IP address
+            messageService.sendMulticastMessage(message);
         }
         catch (IOException e) {
             e.printStackTrace();

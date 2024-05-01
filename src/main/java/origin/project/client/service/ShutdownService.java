@@ -3,15 +3,10 @@ package origin.project.client.service;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import origin.project.client.Node;
-import origin.project.server.controller.NamingServerController;
-import origin.project.server.model.naming.NamingEntry;
-import origin.project.server.model.naming.dto.NodeRequest;
 
-import java.io.IOException;
+
 import java.net.*;
-import java.util.Optional;
 import java.util.logging.Logger;
 
 @Service
@@ -27,7 +22,6 @@ public class ShutdownService {
         System.out.println("\n Initiating shutdown process... \n");
         try {
             int previousID = node.getPreviousID();
-            int currentID = node.getCurrentID();
             int nextID = node.getNextID();
 
             if (node.getExistingNodes() > 1) {
@@ -46,32 +40,25 @@ public class ShutdownService {
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
             // Sending
-                messageService.sendMessage(IPnextInet,previousID,-1);
-                messageService.sendMessage(IPpreviousInet,-1,nextID);
+                if (previousID == nextID) {                                         // Only 2 nodes in network
+                    messageService.sendMessage(IPnextInet, -1, -1);
+                } else {
+                    messageService.sendMessage(IPnextInet, previousID, -1);
+                    messageService.sendMessage(IPpreviousInet, -1, nextID);
+                }
             }
 
-            // remove mine
-            String URLdelete = node.getNamingServerUrl() + "/remove-node/";
-            String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress() + "\"}" ;
+            // remove node
+            String URLdelete = node.getNamingServerUrl() + "/remove-node";
+            String nodeBody = "{\"name\" : \"" + node.getNodeName() + "\", \"ip\" : \"" + node.getIpAddress().getHostAddress() + "\"}" ;
             messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
             node.setExistingNodes(node.getExistingNodes()-1);
 
         } catch (UnknownHostException e) {
             logger.warning("Error resolving hostname or IP during shutdown: " + e.getMessage());
             e.printStackTrace(); // Print the stack trace for detailed debugging
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
-
-    private void sendID(InetAddress receiverIP, int ID, int targetID) {
-        try (DatagramSocket socket = new DatagramSocket()) {
-            String responseMessage = ID + "," + targetID;
-            byte[] buf = responseMessage.getBytes();
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, receiverIP, node.getMulticastPort());
-            socket.send(packet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
 }

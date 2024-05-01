@@ -41,11 +41,10 @@ public class MessageService {
         new Thread(this::receiveMessage).start();
     }
 
-    public void sendMulticastMessage(String nodeName, InetAddress IP) {
+    public void sendMulticastMessage(String message) {
         try {
             InetAddress group = InetAddress.getByName(MULTICAST_GROUP);
             try (DatagramSocket socket = new DatagramSocket()) {
-                String message = "newNode," + nodeName + "," + IP; // Combine name and IP address
                 byte[] buf = message.getBytes();
 
                 DatagramPacket packet = new DatagramPacket(buf, buf.length, group, PORT);
@@ -69,18 +68,24 @@ public class MessageService {
                 }
 
             }
-            catch (IOException e){
+            catch (IOException | InterruptedException e){
                 e.printStackTrace();
             }
         }
     }
 
-    private void processMessage(String message, InetAddress senderIPAddress) throws IOException {
+    private void processMessage(String message, InetAddress senderIPAddress) throws IOException, InterruptedException {
         String[] parts = message.split(",");
         if (parts[0].equals("newNode")) {
             // Process multicast message
             logger.info("Received multicast");
             processMulticastMessage(message, senderIPAddress);
+        } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
+            // Process discovery message only if necessary
+            if (node.getPreviousID()==-1 || node.getNextID()==-1) {
+                logger.info("Received discovery message");
+                processDiscoveryMessage(message, senderIPAddress);
+            }
         } else {
             // Process unicast message
             logger.info("Received unicast");
@@ -88,17 +93,17 @@ public class MessageService {
         }
     }
 
-    private void processUnicastMessage(String message, InetAddress senderIPAddress) throws IOException {
+    private void processUnicastMessage(String message, InetAddress senderIPAddress) throws IOException, InterruptedException {
         String[] parts = message.split(",");
         if (parts[0].equals("namingServer")) {
-            logger.info("Processing unicast from naming server with IP address "+senderIPAddress.toString());
+            logger.info("Processing unicast from naming server with IP address " + senderIPAddress.toString());
             node.setNamingServerIp(senderIPAddress);
-            node.setNamingServerUrl("http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/naming-server");
+            node.setNamingServerUrl("http:/" + node.getNamingServerIp() + ":" + node.getNamingServerPort() + "/naming-server");
 
             node.setDiscoveryFinished(true);
 
             if (parts.length != 3) {
-                throw new IOException("Invalid multicast message format");
+                throw new IOException("Invalid message format");
             }
 
             int existingNodes = Integer.parseInt(parts[1]);
@@ -111,12 +116,19 @@ public class MessageService {
                 logger.info("Previous ID: " + node.getPreviousID());
                 logger.info("Current ID: " + node.getCurrentID());
                 logger.info("Next ID: " + node.getNextID());
+                // Enable ping for first node in network
+                // Other nodes ping gets enabled after receiving node IDs from other nodes
+                node.setPingEnable(true);
             }
             node.setExistingNodes(existingNodes);
-            logger.info("Existing nodes: "+node.getExistingNodes());
+            logger.info("Existing nodes: " + node.getExistingNodes());
 
         } else {
             logger.info("Processing unicast from other node with IP address "+senderIPAddress.toString());
+
+            // Disable ping while updating node IDs
+            node.setPingEnable(false);
+
             if (parts.length != 2) {
                 throw new IOException("Invalid multicast message format");
             }
@@ -124,29 +136,49 @@ public class MessageService {
             int previousID = Integer.parseInt(parts[0]);
             int nextID = Integer.parseInt(parts[1]);
 
-            if (previousID == -1) {
+            // Shutdown process: update IDs + decrease existing nodes count
+            if (previousID == -1 && nextID == -1) {         // Only one node left in network
+                node.setNextID(node.getCurrentID());
+                node.setPreviousID(node.getCurrentID());
+                node.setExistingNodes(node.getExistingNodes()-1);
+                logger.info("Node "+senderIPAddress.getHostAddress()+" shut down");
+            } else if (previousID == -1) {
                 node.setNextID(nextID);
+                node.setExistingNodes(node.getExistingNodes()-1);
+                logger.info("Node "+senderIPAddress.getHostAddress()+" shut down");
             } else if (nextID == -1) {
                 node.setPreviousID(previousID);
+                node.setExistingNodes(node.getExistingNodes()-1);
+                logger.info("Node "+senderIPAddress.getHostAddress()+" shut down");
+
+            // Update IDs
             } else {
                 node.setPreviousID(previousID);
                 node.setNextID(nextID);
             }
 
+            logger.info("Existing nodes: " + node.getExistingNodes());
             logger.info("Previous ID: " + node.getPreviousID());
             logger.info("Current ID: " + node.getCurrentID());
             logger.info("Next ID: " + node.getNextID());
+
+            // Enable ping
+            Thread.sleep(2000);         // wait until IDs are updated
+            node.setPingEnable(true);
         }
 
     }
 
-    private void processMulticastMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException {
+    private void processMulticastMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {
         logger.info("Processing multicast from other node with IP address "+senderIPAddress.toString());
         // Extract sender's name and IP address from the message
         String[] parts = multicastMessage.split(",");
 
+        // Disable ping while updating node IDs
+        node.setPingEnable(false);
+
         if (parts.length != 3) {
-            throw new IOException("Invalid multicast message format");
+            throw new IOException("Invalid multicast message format"); //Look at!!!
         }
 
         node.setExistingNodes(node.getExistingNodes()+1);
@@ -200,9 +232,45 @@ public class MessageService {
         logger.info("Previous ID: " + node.getPreviousID());
         logger.info("Current ID: " + node.getCurrentID());
         logger.info("Next ID: " + node.getNextID());
+
+        // Enable ping
+        Thread.sleep(2000);         // wait until IDs are updated
+        node.setPingEnable(true);
     }
 
-    public void sendMessage(InetAddress receiverIP, int currentID, int targetID) {
+    private void processDiscoveryMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {
+        logger.info("Processing discovery message from node with IP address "+senderIPAddress.toString());
+        // Extract sender's name and IP address from the message
+        String[] parts = multicastMessage.split(",");
+
+        if (parts.length != 2) {
+            throw new IOException("Invalid discovery message format"); //Look at!!!
+        }
+
+        String message = parts[0];
+        int senderID = Integer.parseInt(parts[1]);
+
+        if (Objects.equals(message, "Discover next") && node.getPreviousID()==-1) {
+            logger.info("New previous node ID");
+            node.setPreviousID(senderID);
+        }
+
+        if (Objects.equals(message, "Discover previous") && node.getNextID()==-1) {
+            logger.info("New next node ID");
+            node.setNextID(senderID);
+        }
+
+        logger.info("Existing nodes: " + node.getExistingNodes());
+        logger.info("Previous ID: " + node.getPreviousID());
+        logger.info("Current ID: " + node.getCurrentID());
+        logger.info("Next ID: " + node.getNextID());
+
+        // Enable ping after updating node ID (because of failure)
+        Thread.sleep(2000);         // wait until IDs are updated
+        node.setPingEnable(true);
+    }
+
+    public void sendMessage(InetAddress receiverIP, int currentID, int targetID) throws UnknownHostException, InterruptedException {
         try (DatagramSocket socket = new DatagramSocket()) {
             String responseMessage = currentID + "," + targetID;
             byte[] buf = responseMessage.getBytes();
@@ -210,6 +278,7 @@ public class MessageService {
             logger.info("Sending message to "+receiverIP);
             socket.send(packet);
         } catch (IOException e) {
+            //FailureService.Failure(receiverIP.getHostAddress());
             e.printStackTrace();
         }
     }
