@@ -6,7 +6,9 @@ import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 
 
+import java.io.File;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 @Service
@@ -15,6 +17,8 @@ public class ShutdownService {
     private Node node;
     @Autowired
     private MessageService messageService;
+    @Autowired
+    private ReplicationService replicationService;
     Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
     @PreDestroy
@@ -39,7 +43,10 @@ public class ShutdownService {
                 IPprevious = IPprevious.replace("\"", "");              // remove double quotes
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
-            // Sending
+            // Update files
+                updateFiles(IPpreviousInet);
+
+                // Sending
                 if (previousID == nextID) {                                         // Only 2 nodes in network
                     messageService.sendMessage(IPnextInet, -1, -1);
                 } else {
@@ -60,5 +67,23 @@ public class ShutdownService {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void updateFiles(InetAddress IPaddress) {
+        ArrayList<String> fileNames = new ArrayList<>();
+        File localFileFolder = new File(node.getReplicatedFolderPath());
+        replicationService.scanFolder(localFileFolder, fileNames);
+        logger.info("Found replicated files: " + fileNames);
+
+        if (fileNames.isEmpty()) {
+            logger.info("Breaking replication shutdown because no replicated files were found");
+            return;
+        }
+
+        // TCP transfer of all files in fileNames send to IPaddress
+        // handle in TCP receiver: if received file is local, send fil to own previous
+
+        // also send log file
+
     }
 }

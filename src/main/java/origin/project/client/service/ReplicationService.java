@@ -25,11 +25,9 @@ import java.util.logging.Logger;
 public class ReplicationService {
     @Autowired
     Node node;
-
     @Autowired
     MessageService messageService;
 
-    @Value("${localfiles.path}")
     String FOLDER_PATH;
 
     Path baseFolder;
@@ -64,12 +62,8 @@ public class ReplicationService {
     }
 
     public void actualInit() throws UnknownHostException{
-        // allows for local testing
-//        System.out.println(node.getNamingServerIp());
-//        if (node.getNamingServerIp() == null) {
-//            node.setNamingServerIp(InetAddress.getByName("127.0.0.1"));
-//        }
 
+        FOLDER_PATH = node.getFolderPath();
         localFileFolder = new File(FOLDER_PATH);
         baseFolder = Paths.get(FOLDER_PATH);
         fileNames = new ArrayList<>();
@@ -198,7 +192,6 @@ public class ReplicationService {
                 if (file.isDirectory()) {
                     scanFolder(file, fileNames);
                 } else {
-
                     Path target = Paths.get(file.getPath());
                     Path relativePath = baseFolder.relativize(target);
 

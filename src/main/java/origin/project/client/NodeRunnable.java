@@ -24,7 +24,6 @@ public class NodeRunnable {
         // Set the arguments as system properties (optional but can be useful)
         System.setProperty("nodeName", nodeName);
         System.setProperty("ipAddress", ipAddress);
-        System.setProperty("localfiles.path", "data");
 
         SpringApplication.run(origin.project.client.NodeRunnable.class, args);
 

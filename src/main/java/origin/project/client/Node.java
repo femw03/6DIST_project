@@ -31,6 +31,11 @@ public class Node {
     private String nodeName;
     @Value("${ipAddress}")
     private String ipAddress;
+    @Value("${localfiles.path}")
+    private String folderPath;
+    @Value("${replicatedfiles_path}")
+    private String replicatedFolderPath;
+
     private int currentID;
     private int nextID=-1;
     private int previousID=-1;
