@@ -5,6 +5,8 @@ import com.google.gson.reflect.TypeToken;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +27,7 @@ public class ReplicationController {
     NamingService namingService;
 
     @PostMapping("/initial-list")
-    public Map<String, InetAddress> nodeReportsInitialFiles(@RequestBody String hashedFileNamesJSON) {
+    public ResponseEntity<Map<String, InetAddress>> nodeReportsInitialFiles(@RequestBody String hashedFileNamesJSON) {
         Map<String, InetAddress> replicationMap = new HashMap<>();
 
         Gson gson = new Gson();
@@ -42,6 +44,6 @@ public class ReplicationController {
 
         }
 
-        return replicationMap;
+        return new ResponseEntity<>(replicationMap, HttpStatus.OK);
     }
 }
