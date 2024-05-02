@@ -93,12 +93,14 @@ public class MessageService {
         }
     }
 
-    private void processUnicastMessage(String message, InetAddress senderIPAddress) throws IOException {
+    private void processUnicastMessage(String message, InetAddress senderIPAddress) throws IOException, InterruptedException {
         String[] parts = message.split(",");
         if (parts[0].equals("namingServer")) {
             logger.info("Processing unicast from naming server with IP address " + senderIPAddress.toString());
             node.setNamingServerIp(senderIPAddress);
             node.setNamingServerUrl("http:/" + node.getNamingServerIp() + ":" + node.getNamingServerPort() + "/naming-server");
+
+            node.setDiscoveryFinished(true);
 
             if (parts.length != 3) {
                 throw new IOException("Invalid message format");
@@ -114,12 +116,19 @@ public class MessageService {
                 logger.info("Previous ID: " + node.getPreviousID());
                 logger.info("Current ID: " + node.getCurrentID());
                 logger.info("Next ID: " + node.getNextID());
+                // Enable ping for first node in network
+                // Other nodes ping gets enabled after receiving node IDs from other nodes
+                node.setPingEnable(true);
             }
             node.setExistingNodes(existingNodes);
             logger.info("Existing nodes: " + node.getExistingNodes());
 
         } else {
             logger.info("Processing unicast from other node with IP address "+senderIPAddress.toString());
+
+            // Disable ping while updating node IDs
+            node.setPingEnable(false);
+
             if (parts.length != 2) {
                 throw new IOException("Invalid multicast message format");
             }
@@ -127,18 +136,35 @@ public class MessageService {
             int previousID = Integer.parseInt(parts[0]);
             int nextID = Integer.parseInt(parts[1]);
 
-            if (previousID == -1) {
+            // Shutdown process: update IDs + decrease existing nodes count
+            if (previousID == -1 && nextID == -1) {         // Only one node left in network
+                node.setNextID(node.getCurrentID());
+                node.setPreviousID(node.getCurrentID());
+                node.setExistingNodes(node.getExistingNodes()-1);
+                logger.info("Node "+senderIPAddress.getHostAddress()+" shut down");
+            } else if (previousID == -1) {
                 node.setNextID(nextID);
+                node.setExistingNodes(node.getExistingNodes()-1);
+                logger.info("Node "+senderIPAddress.getHostAddress()+" shut down");
             } else if (nextID == -1) {
                 node.setPreviousID(previousID);
+                node.setExistingNodes(node.getExistingNodes()-1);
+                logger.info("Node "+senderIPAddress.getHostAddress()+" shut down");
+
+            // Update IDs
             } else {
                 node.setPreviousID(previousID);
                 node.setNextID(nextID);
             }
 
+            logger.info("Existing nodes: " + node.getExistingNodes());
             logger.info("Previous ID: " + node.getPreviousID());
             logger.info("Current ID: " + node.getCurrentID());
             logger.info("Next ID: " + node.getNextID());
+
+            // Enable ping
+            Thread.sleep(2000);         // wait until IDs are updated
+            node.setPingEnable(true);
         }
 
     }
@@ -147,6 +173,9 @@ public class MessageService {
         logger.info("Processing multicast from other node with IP address "+senderIPAddress.toString());
         // Extract sender's name and IP address from the message
         String[] parts = multicastMessage.split(",");
+
+        // Disable ping while updating node IDs
+        node.setPingEnable(false);
 
         if (parts.length != 3) {
             throw new IOException("Invalid multicast message format"); //Look at!!!
@@ -203,9 +232,13 @@ public class MessageService {
         logger.info("Previous ID: " + node.getPreviousID());
         logger.info("Current ID: " + node.getCurrentID());
         logger.info("Next ID: " + node.getNextID());
+
+        // Enable ping
+        Thread.sleep(2000);         // wait until IDs are updated
+        node.setPingEnable(true);
     }
 
-    private void processDiscoveryMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException {
+    private void processDiscoveryMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {
         logger.info("Processing discovery message from node with IP address "+senderIPAddress.toString());
         // Extract sender's name and IP address from the message
         String[] parts = multicastMessage.split(",");
@@ -227,9 +260,14 @@ public class MessageService {
             node.setNextID(senderID);
         }
 
+        logger.info("Existing nodes: " + node.getExistingNodes());
         logger.info("Previous ID: " + node.getPreviousID());
         logger.info("Current ID: " + node.getCurrentID());
         logger.info("Next ID: " + node.getNextID());
+
+        // Enable ping after updating node ID (because of failure)
+        Thread.sleep(2000);         // wait until IDs are updated
+        node.setPingEnable(true);
     }
 
     public void sendMessage(InetAddress receiverIP, int currentID, int targetID) throws UnknownHostException, InterruptedException {
@@ -286,6 +324,50 @@ public class MessageService {
 //            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setDoOutput(true);
+
+            // Try writing the email to JSON
+            try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
+                byte[] requestBody = requestbody.getBytes(StandardCharsets.UTF_8);
+                outputStream.write(requestBody, 0, requestBody.length);
+            }
+
+            // If connection is successful, we can read the response
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                // reader
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                // response
+                StringBuilder response = new StringBuilder();
+                String line;
+                // build response = adding status code, status message, headers, ...
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                output = response.toString();
+            }
+            else {
+                // If the request was not successful, handle the error accordingly
+                output = "Failed to " + request + ". HTTP Error: " + connection.getResponseCode();
+            }
+            connection.disconnect();
+            return output;
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String postRequest(String endpoint, String requestbody, String request) {
+
+        try {
+            String output;
+
+            URL url = new URL(endpoint);
+//            System.out.println(url);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setDoOutput(true);
 

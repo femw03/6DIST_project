@@ -20,4 +20,5 @@ public interface NamingRepository extends CrudRepository<NamingEntry, Integer> {
     @Query("SELECT e FROM NamingEntry e WHERE e.hash = (SELECT MAX(ee.hash) FROM NamingEntry ee)")
     Optional<NamingEntry> findEntryWithLargestHash();
 
+    Optional<NamingEntry> findByIP(InetAddress iPaddress);
 }

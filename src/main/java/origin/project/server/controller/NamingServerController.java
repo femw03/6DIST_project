@@ -11,10 +11,11 @@ import org.springframework.web.server.ResponseStatusException;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
-import origin.project.server.service.JsonServiceNaming;
+import origin.project.server.service.JsonService;
 import origin.project.server.service.NamingService;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -32,7 +33,7 @@ public class NamingServerController {
     @Autowired
     private NamingService namingService;
     @Autowired
-    private JsonServiceNaming jsonService;
+    private JsonService jsonService;
 
     @Value("${multicast.port}")
     private int multicastPort;
@@ -45,7 +46,7 @@ public class NamingServerController {
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
-    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonServiceNaming jsonService) {
+    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
         this.namingRepository = namingRepository;
         this.namingService = namingService;
         this.jsonService = jsonService;
@@ -82,7 +83,6 @@ public class NamingServerController {
         }
 
         NamingEntry namingEntry = new NamingEntry(hash, ipAddress);
-        //System.out.println(namingEntry.getIP());
         jsonService.addEntryToJsonFile(FILE_PATH, namingEntry);
         namingRepository.save(namingEntry);
         return ResponseEntity.ok("Node with hashID "+ hash + " successfully created!");
@@ -123,10 +123,10 @@ public class NamingServerController {
     }
 
     @GetMapping("/get-node-by-hash/{hashValue}")
-    public Optional<NamingEntry> getNode(@PathVariable("hashValue") int hashValue) {
-        logger.info("GET: /get-node/"+ hashValue);
+    public Optional<NamingEntry> getNodeByHash(@PathVariable("hashValue") int hashValue) {
+        logger.info("GET: /get-node-by-hash/"+ hashValue);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
         }
         return optionalEntry;
@@ -135,27 +135,47 @@ public class NamingServerController {
 
     @GetMapping("/get-IP-by-hash/{hashValue}")
     public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
-        logger.info("GET: /get-node/"+ hashValue);
+        logger.info("GET: /get-IP-by-hash/"+ hashValue);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");
         }
-
         NamingEntry entry = optionalEntry.get();
-        InetAddress IP = entry.getIP();
-        return IP;
+        return entry.getIP();
+    }
+
+    @GetMapping("/get-hash-by-IP/{IPaddress}")
+    public int getHash(@PathVariable("IPaddress") String IPaddress) throws UnknownHostException {
+        logger.info("GET: /get-hash-by-IP/"+ IPaddress);
+        Optional<NamingEntry> optionalEntry = namingRepository.findByIP(InetAddress.getByName(IPaddress));
+        if (optionalEntry.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"IP not found!");
+        }
+        NamingEntry entry = optionalEntry.get();
+        return entry.getHash();
     }
 
 
     @GetMapping("/get-node-by-name/{name}")
-    public Optional<NamingEntry> getNode(@PathVariable("name") String name) {
-        logger.info("GET: /get-node/"+ name);
+    public Optional<NamingEntry> getNodeByName(@PathVariable("name") String name) {
+        logger.info("GET: /get-node-by-name/"+ name);
         int hashValue = namingService.hashingFunction(name);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
-        if(optionalEntry.isEmpty()){
+        if (optionalEntry.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Name not found!");
         }
         return optionalEntry;
+    }
+
+    @GetMapping("/get-node/{ip}")
+    public boolean getNode(@PathVariable("ip") String ip) throws UnknownHostException {
+        logger.info("GET: /get-node/"+ ip);
+        boolean inRepository = false;
+        Optional<NamingEntry> optionalEntry = namingRepository.findByIP(InetAddress.getByName(ip));
+        if (optionalEntry.isPresent()) {
+            inRepository=true;
+        }
+        return inRepository;
     }
 
     @GetMapping("/file-location/{file-name}")
@@ -168,26 +188,12 @@ public class NamingServerController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ERROR: name cannot be null.");
         }
         int fileHash = namingService.hashingFunction(fileName);
-        ArrayList<NamingEntry> nodesWithHashSmallerThanFile = (ArrayList<NamingEntry>) namingRepository.findByHashLessThan(fileHash);
 
-        if (nodesWithHashSmallerThanFile.isEmpty()) {
-            // If no nodes with hash smaller than file hash, find the node with the biggest hash
-            Optional<NamingEntry> ownerNodeOptional = namingRepository.findEntryWithLargestHash();
-            if (ownerNodeOptional.isPresent()) {
-                NamingEntry ownerNode = ownerNodeOptional.get();
-                logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
-                return ownerNode.getIP();
-            }
-            else {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, ".");
-            }
-        }
-        else {
-            // Find the node with the smallest difference between its hash and the file hash
-            NamingEntry ownerNode = namingService.findNearestNodeId(fileHash,nodesWithHashSmallerThanFile);
-            logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
-            return ownerNode.getIP();
-        }
+        InetAddress ownerNode = namingService.findOwner(fileHash);
+
+        logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
+
+        return ownerNode;
 
     }
 
@@ -204,7 +210,7 @@ public class NamingServerController {
 
     @GetMapping("/get-hash/{name}")
     public int getHashID(@PathVariable("name") String name) {
-        logger.info("GET /hash/" + name);
+        logger.info("GET /get-hash/" + name);
         return namingService.hashingFunction(name);
     }
 

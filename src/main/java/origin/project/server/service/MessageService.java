@@ -12,6 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
@@ -60,30 +61,32 @@ public class MessageService {
                 // Parse multicast message and extract node name, IP address
                 String[] parts = message.split(",");
 
-                if (parts.length != 3) {
-                    throw new IOException("Invalid multicast message format");
+                if (Objects.equals(parts[0], "newNode")) {
+
+                    if (parts.length != 3) {
+                        throw new IOException("Invalid multicast message format");
+                    }
+
+                    String nodeName = parts[1];
+                    String ipAddressString = parts[2];
+                    if (ipAddressString.startsWith("/")) {
+                        // Extract the IP address without the leading slash
+                        ipAddressString = ipAddressString.substring(1);
+                    }
+                    InetAddress ipAddress = InetAddress.getByName(ipAddressString);
+
+                    namingServerController.addNode(new NodeRequest(nodeName, ipAddress));
+
+                    // Respond to new node with number of existing nodes
+                    int existingNodesCount = (int) namingRepository.count();
+
+                    logger.info("Multicast message handled successfully. Existing nodes count: " + existingNodesCount);
+
+                    // Calculate hash of nodeName
+                    int nodeHash = namingService.hashingFunction(nodeName);
+
+                    sendResponse(existingNodesCount, nodeHash, ipAddress);
                 }
-
-                // parts[0] = "newNode"
-                String nodeName = parts[1];
-                String ipAddressString = parts[2];
-                if (ipAddressString.startsWith("/")) {
-                    // Extract the IP address without the leading slash
-                    ipAddressString = ipAddressString.substring(1);
-                }
-                InetAddress ipAddress = InetAddress.getByName(ipAddressString);
-
-                namingServerController.addNode(new NodeRequest(nodeName, ipAddress));
-
-                // Respond to new node with number of existing nodes
-                int existingNodesCount = (int) namingRepository.count();
-
-                logger.info("Multicast message handled successfully. Existing nodes count: " + existingNodesCount);
-
-                // Calculate hash of nodeName
-                int nodeHash = namingService.hashingFunction(nodeName);
-
-                sendResponse(existingNodesCount, nodeHash, ipAddress);
             }
             catch (IOException e){
                 e.printStackTrace();

@@ -4,10 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -23,6 +19,7 @@ public class FailureService {
     public void Failure(String IPaddress) throws UnknownHostException, InterruptedException {
         int nextID = node.getNextID();
         int previousID = node.getPreviousID();
+        logger.info("Existing nodes: "+node.getExistingNodes());
 
         // next
         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
@@ -40,10 +37,10 @@ public class FailureService {
             logger.info("Previous ID: " + node.getPreviousID());
             logger.info("Current ID: " + node.getCurrentID());
             logger.info("Next ID: " + node.getNextID());
+            node.setPingEnable(true);
 
         } else if (Objects.equals(IPaddress, IPprevious)) {
             node.setPreviousID(-1);
-            // send multicast
             String message = "Discover previous," + node.getCurrentID();
             // Wait until everyone discovered failed connection
             Thread.sleep(10000); // 10 seconds delay
@@ -51,21 +48,29 @@ public class FailureService {
 
         } else if (Objects.equals(IPaddress, IPnext)) {
             node.setNextID(-1);
-            // send multicast
             String message = "Discover next," + node.getCurrentID();
             // Wait until everyone discovered failed connection
             Thread.sleep(10000); // 10 seconds delay
             messageService.sendMulticastMessage(message);
         }
 
-        // remove failed node
-        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + IPaddress;
-        int hashID = Integer.parseInt(messageService.getRequest(URLhash, "get hashID"));
+        // Remove failed node
+        String URLnode = node.getNamingServerUrl() + "/get-node/" + IPaddress;
+        boolean nodeExists = Boolean.parseBoolean(messageService.getRequest(URLnode, "get node"));
 
-        String URLdelete = node.getNamingServerUrl() + "/remove-node/";
-        String nodeBody = "{\"hash\" : \"" + hashID + "\", \"ip\" : \"" + IPaddress + "\"}" ;
-        messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
-        node.setExistingNodes(node.getExistingNodes()-1);
+        if (nodeExists) {
+            String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + IPaddress;
+            String hashIDString = messageService.getRequest(URLhash, "get hashID");
+            logger.info("Removing node "+IPaddress);
+            int hashID = Integer.parseInt(hashIDString);
+            String URLdelete = node.getNamingServerUrl() + "/remove-node";
+            String nodeBody = "{\"hash\" : \"" + hashID + "\", \"ip\" : \"" + IPaddress + "\"}" ;
+            messageService.deleteRequest(URLdelete, nodeBody, "removeNode");
+        } else {
+            logger.info("Node "+IPaddress+" already removed");
+        }
+
+
     }
 
 }
