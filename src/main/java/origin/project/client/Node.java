@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.logging.Logger;
 
 @Getter
 @Setter
@@ -40,7 +39,6 @@ public class Node {
 
     private int existingNodes=0;
     private boolean pingEnable=false;
-    Logger logger = Logger.getLogger(Node.class.getName());
 
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);
