@@ -2,9 +2,12 @@ package origin.project.client;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import origin.project.client.service.filelogs.FileLogRepository;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -39,6 +42,13 @@ public class Node {
 
     private int existingNodes=0;
     private boolean pingEnable=false;
+
+    @Value("${node.filepath}")
+    private String FILE_PATH;
+    @Value("${node.directory}")
+    private String DIRECTORY;
+    @Autowired
+    private FileLogRepository fileLogRepository;
 
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);

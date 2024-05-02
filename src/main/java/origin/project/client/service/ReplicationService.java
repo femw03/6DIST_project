@@ -29,6 +29,9 @@ public class ReplicationService {
     @Autowired
     MessageService messageService;
 
+    @Autowired
+    FileTransferService fileTransferService;
+
     @Value("${localfiles.path}")
     String FOLDER_PATH;
 
