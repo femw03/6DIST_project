@@ -18,7 +18,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
@@ -101,15 +100,8 @@ public class ReplicationService {
             return;
         }
 
-        Map<String, Integer> hashedFileNames = new HashMap<>();
-
-        // hash fileNames
-        for (String fileName : fileNames) {
-            hashedFileNames.put(fileName, hashingFunction(fileName));
-        }
-
         // Convert array to JSON
-        String hashedFileNamesJSON = new Gson().toJson(hashedFileNames);
+        String hashedFileNamesJSON = new Gson().toJson(fileNames);
 
         // report hashedFileNames to Naming Server
         logger.info("hashed FileNames JSON" + hashedFileNamesJSON);
@@ -207,23 +199,6 @@ public class ReplicationService {
             }
         }
     }
-
-
-    public int hashingFunction(String name) {
-        // Hash code given in ppt, but nodes with almost same name got same hash
-        /*double max = 2147483647.0;
-        double min = -2147483647.0;
-        double hash = (name.hashCode() + max) * ( 32768.0 / (max + Math.abs(min)));
-        return (int)hash;*/
-
-        int hash = name.hashCode();  // Use Java's hashCode method to get an initial hash code
-
-        // Ensure the hash code falls within the range [0, 32767] (inclusive)
-        hash = Math.abs(hash) % 32768;
-
-        return hash;
-    }
-
 
     public void replication() {
 
