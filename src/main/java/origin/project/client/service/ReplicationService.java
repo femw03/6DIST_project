@@ -1,6 +1,7 @@
 package origin.project.client.service;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,7 @@ import origin.project.client.Node;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
+import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
@@ -39,6 +41,8 @@ public class ReplicationService {
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
     String replicationBaseUrl;
+
+    boolean updateThreadRunning = false;
 
     @PostConstruct
     public void init() {
@@ -76,17 +80,26 @@ public class ReplicationService {
         startUp();
 
         // start update thread
+        updateThreadRunning = true;
+        new Thread(this::updateThread);
+
     }
 
 
     // Starting
     //  - Verify local files
     //  - Report hash-values to naming server
-    public void startUp() {
+    //  - Transfer files to the owner-nodes.
+    public void startUp() throws UnknownHostException {
         // get current files.
         scanFolder(localFileFolder, fileNames);
 
         logger.info("Found following files: " + fileNames);
+
+        if (fileNames.isEmpty()) {
+            logger.info("Breaking replication start-up because no local files were found");
+            return;
+        }
 
         Map<String, Integer> hashedFileNames = new HashMap<>();
 
@@ -104,12 +117,44 @@ public class ReplicationService {
         String replicationEndpoint = replicationBaseUrl + "/initial-list";
         logger.info("Endpoint for the initial list post-request: " + replicationEndpoint);
 
-        String replicationMap = messageService.postRequest(replicationEndpoint, hashedFileNamesJSON,"Initial local files list");
-        logger.info("Replication map returned by server : " + replicationMap);
+        String replicationMapJSON = messageService.postRequest(replicationEndpoint, hashedFileNamesJSON,"Initial local files list");
+        logger.info("Replication map returned by server : " + replicationMapJSON);
 
+        // local-files are present so replication map cannot be empty.
+        if (replicationMapJSON == null || replicationMapJSON.trim().isBlank()) {
+            throw new RuntimeException("Server returned invalid replication map.");
+        }
 
+        Type type = new TypeToken<HashMap<String, String>>() {}.getType();
+        Map<String, String> replicationMap = new Gson().fromJson(replicationMapJSON, type);
 
+        // send files to owner-node
+        for (String fileName : replicationMap.keySet()) {
+            InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
+            File file = new File(fileName);
 
+            System.out.println(targetIP + fileName);
+
+            // skip files belonging to current
+            // use file-transfer-service to pass file.
+        }
+
+    }
+
+    public void updateThread() {
+        while(updateThreadRunning) {
+            // check updates
+
+            // report updates
+
+            // every 10 seconds
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
 
     /**
