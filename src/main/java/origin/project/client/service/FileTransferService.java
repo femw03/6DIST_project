@@ -6,9 +6,11 @@ import origin.project.client.Node;
 import origin.project.client.service.filelogs.FileLogEntry;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.logging.Logger;
 
 @Service
 public class FileTransferService {
@@ -18,13 +20,17 @@ public class FileTransferService {
     @Autowired
     private MessageService messageService;
 
+    Logger logger = Logger.getLogger(FileTransferService.class.getName());
+
     public FileTransferService() {
         new Thread(this::receiveFile).start();
     }
 
-    public void sendFile(String fileName, int nodeID) {
-        String nodeIP = messageService.getRequest(node.getNamingServerUrl() + "/get-IP-by-hash/" + nodeID, "Get ip by hash");
+    public void sendFile(String fileName, InetAddress nodeIP) {
+        logger.info("Sending file log...");
         sendFileLog(fileName, nodeIP);
+
+        logger.info("Sending file data...");
         sendFileData(fileName, nodeIP);
     }
 
@@ -32,12 +38,15 @@ public class FileTransferService {
         while (true) {
             FileLogEntry fileLogEntry = receiveFileLog();
             if (fileLogEntry != null) {
-                receiveFileData(fileLogEntry.getFileName());
+                String fileName = fileLogEntry.getFileName();
+                logger.info("Received file log from " + fileName);
+                receiveFileData(fileName);
+                logger.info("Received file data");
             }
         }
     }
 
-    private void sendFileData(String fileName, String nodeIP) {
+    private void sendFileData(String fileName, InetAddress nodeIP) {
         try {
             // Create a socket object
             Socket socket  = new Socket();
@@ -65,7 +74,7 @@ public class FileTransferService {
         }
     }
 
-    private void sendFileLog(String fileName, String nodeIP) {
+    private void sendFileLog(String fileName, InetAddress nodeIP) {
         try {
             // Create a socket object
             Socket socket  = new Socket(nodeIP, node.getNodePort());

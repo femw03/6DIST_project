@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.service.filelogs.FileLogEntry;
+import origin.project.client.service.filelogs.FileLogRepository;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
@@ -31,6 +33,12 @@ public class ReplicationService {
 
     @Autowired
     FileTransferService fileTransferService;
+
+    @Autowired
+    FileLogRepository fileLogRepository;
+
+    @Autowired
+    JsonServiceFileTransfer jsonServiceFileTransfer;
 
     @Value("${localfiles.path}")
     String FOLDER_PATH;
@@ -140,8 +148,11 @@ public class ReplicationService {
 
             // skip files belonging to current
             // use file-transfer-service to pass file.
-        }
 
+            FileLogEntry fileLogEntry = new FileLogEntry(fileName);
+            jsonServiceFileTransfer.addEntryToJsonFile(node.getFILE_PATH(), fileLogEntry);
+            fileTransferService.sendFile(fileName, targetIP);
+        }
     }
 
     public void updateThread() {
