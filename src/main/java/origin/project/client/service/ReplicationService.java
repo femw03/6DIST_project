@@ -7,8 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
-import origin.project.client.service.filelogs.FileLogEntry;
-import origin.project.client.service.filelogs.FileLogRepository;
+import origin.project.client.model.dto.FileTransfer;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
@@ -20,7 +19,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
@@ -31,18 +29,11 @@ public class ReplicationService {
     @Autowired
     MessageService messageService;
 
-    @Autowired
-    FileTransferService fileTransferService;
-
-    @Autowired
-    FileLogRepository fileLogRepository;
-
-    @Autowired
-    JsonServiceFileTransfer jsonServiceFileTransfer;
-
     @Value("${localfiles.path}")
     String FOLDER_PATH;
 
+    @Autowired
+    FileService fileService;
     Path baseFolder;
 
     File localFileFolder;
@@ -112,15 +103,8 @@ public class ReplicationService {
             return;
         }
 
-        Map<String, Integer> hashedFileNames = new HashMap<>();
-
-        // hash fileNames
-        for (String fileName : fileNames) {
-            hashedFileNames.put(fileName, hashingFunction(fileName));
-        }
-
         // Convert array to JSON
-        String hashedFileNamesJSON = new Gson().toJson(hashedFileNames);
+        String hashedFileNamesJSON = new Gson().toJson(fileNames);
 
         // report hashedFileNames to Naming Server
         logger.info("hashed FileNames JSON" + hashedFileNamesJSON);
@@ -139,19 +123,26 @@ public class ReplicationService {
         Type type = new TypeToken<HashMap<String, String>>() {}.getType();
         Map<String, String> replicationMap = new Gson().fromJson(replicationMapJSON, type);
 
+        Gson gson = new Gson();
+        FileTransfer fileTransfer;
         // send files to owner-node
         for (String fileName : replicationMap.keySet()) {
+            // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
-            File file = new File(fileName);
+            String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
+            System.out.println(fileTransferUrl + ": " + fileName);
 
-            System.out.println(targetIP + fileName);
+            // create file-byteStream
+            File file = new File("data/" + fileName);
+            byte[] fileBytes = fileService.fileToBytes(file);
 
-            // skip files belonging to current
-            // use file-transfer-service to pass file.
+            // create Filetransfer-object and serialize
+            fileTransfer = new FileTransfer(fileName, fileBytes);
+            String fileTransferJson = gson.toJson(fileTransfer);
 
-            FileLogEntry fileLogEntry = new FileLogEntry(fileName);
-            jsonServiceFileTransfer.addEntryToJsonFile(node.getFILE_PATH(), fileLogEntry);
-            fileTransferService.sendFile(fileName, targetIP);
+            // send request
+            String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
+            System.out.println(response);
         }
     }
 
@@ -221,23 +212,6 @@ public class ReplicationService {
             }
         }
     }
-
-
-    public int hashingFunction(String name) {
-        // Hash code given in ppt, but nodes with almost same name got same hash
-        /*double max = 2147483647.0;
-        double min = -2147483647.0;
-        double hash = (name.hashCode() + max) * ( 32768.0 / (max + Math.abs(min)));
-        return (int)hash;*/
-
-        int hash = name.hashCode();  // Use Java's hashCode method to get an initial hash code
-
-        // Ensure the hash code falls within the range [0, 32767] (inclusive)
-        hash = Math.abs(hash) % 32768;
-
-        return hash;
-    }
-
 
     public void replication() {
 
