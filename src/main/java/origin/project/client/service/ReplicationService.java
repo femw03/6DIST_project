@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.model.dto.FileTransfer;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
@@ -29,6 +30,8 @@ public class ReplicationService {
 
     String FOLDER_PATH;
 
+    @Autowired
+    FileService fileService;
     Path baseFolder;
 
     File localFileFolder;
@@ -114,17 +117,27 @@ public class ReplicationService {
         Type type = new TypeToken<HashMap<String, String>>() {}.getType();
         Map<String, String> replicationMap = new Gson().fromJson(replicationMapJSON, type);
 
+        Gson gson = new Gson();
+        FileTransfer fileTransfer;
         // send files to owner-node
         for (String fileName : replicationMap.keySet()) {
+            // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
-            File file = new File(fileName);
+            String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
+            System.out.println(fileTransferUrl + ": " + fileName);
 
-            System.out.println(targetIP + fileName);
+            // create file-byteStream
+            File file = new File("data/" + fileName);
+            byte[] fileBytes = fileService.fileToBytes(file);
 
-            // skip files belonging to current
-            // use file-transfer-service to pass file.
+            // create Filetransfer-object and serialize
+            fileTransfer = new FileTransfer(fileName, fileBytes);
+            String fileTransferJson = gson.toJson(fileTransfer);
+
+            // send request
+            String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
+            System.out.println(response);
         }
-
     }
 
     public void updateThread() {
