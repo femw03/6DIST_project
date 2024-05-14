@@ -6,8 +6,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.service.FileService;
+import origin.project.client.service.MessageService;
+import origin.project.client.service.ReplicationService;
+
+import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 @Getter
@@ -16,12 +24,18 @@ import java.util.logging.Logger;
 @RequestMapping("/replication")
 public class ReplicationController {
     @Autowired
-    FileService fileService;
+    private FileService fileService;
+    @Autowired
+    private Node node;
+    @Autowired
+    private ReplicationService replicationService;
+    @Autowired
+    private MessageService messageService;
 
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
     @PostMapping("/transfer")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) {
+    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
@@ -33,7 +47,21 @@ public class ReplicationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file");
         }
 
-        fileService.createFileFromTransfer(fileTransfer);
+        ArrayList<String> fileNames = new ArrayList<>();
+        File localFileFolder = new File(node.getFolderPath());
+        replicationService.scanFolder(localFileFolder, fileNames);
+        logger.info("Found local files: " + fileNames);
+
+        if (fileNames.contains(name)) {         // file already stored locally on node
+            String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getPreviousID();
+            String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
+            // Because of GET request, IP is converted to string with extra double quotes ("")
+            IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+            InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
+            fileService.sendFiles(IPpreviousInet,name);
+        } else {
+            fileService.createFileFromTransfer(fileTransfer);
+        }
 
         return ResponseEntity.ok("File " + fileTransfer.getFileName() + " received successfully.");
     }

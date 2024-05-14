@@ -1,9 +1,11 @@
 package origin.project.client.service;
 
+import com.google.gson.Gson;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.model.dto.FileTransfer;
 
 
 import java.io.File;
@@ -19,6 +21,8 @@ public class ShutdownService {
     private MessageService messageService;
     @Autowired
     private ReplicationService replicationService;
+    @Autowired
+    FileService fileService;
     Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
     @PreDestroy
@@ -71,8 +75,8 @@ public class ShutdownService {
 
     private void updateFiles(InetAddress IPaddress) {
         ArrayList<String> fileNames = new ArrayList<>();
-        File localFileFolder = new File(node.getReplicatedFolderPath());
-        replicationService.scanFolder(localFileFolder, fileNames);
+        File replicatedFileFolder = new File(node.getReplicatedFolderPath());
+        replicationService.scanFolder(replicatedFileFolder, fileNames);
         logger.info("Found replicated files: " + fileNames);
 
         if (fileNames.isEmpty()) {
@@ -81,9 +85,11 @@ public class ShutdownService {
         }
 
         // TCP transfer of all files in fileNames send to IPaddress
-        // handle in TCP receiver: if received file is local, send fil to own previous
+        for (String fileName : fileNames) {
+            fileService.sendFiles(IPaddress,fileName);
+        }
 
-        // also send log file
+        // Transfer file log of every replicated node to new node + update
 
     }
 }

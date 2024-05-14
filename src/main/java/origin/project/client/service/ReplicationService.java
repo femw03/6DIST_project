@@ -27,11 +27,11 @@ public class ReplicationService {
     Node node;
     @Autowired
     MessageService messageService;
+    @Autowired
+    FileService fileService;
 
     String FOLDER_PATH;
 
-    @Autowired
-    FileService fileService;
     Path baseFolder;
 
     File localFileFolder;
@@ -123,20 +123,7 @@ public class ReplicationService {
         for (String fileName : replicationMap.keySet()) {
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
-            String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
-            System.out.println(fileTransferUrl + ": " + fileName);
-
-            // create file-byteStream
-            File file = new File("data/" + fileName);
-            byte[] fileBytes = fileService.fileToBytes(file);
-
-            // create Filetransfer-object and serialize
-            fileTransfer = new FileTransfer(fileName, fileBytes);
-            String fileTransferJson = gson.toJson(fileTransfer);
-
-            // send request
-            String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
-            System.out.println(response);
+            fileService.sendFiles(targetIP,fileName);
         }
     }
 
