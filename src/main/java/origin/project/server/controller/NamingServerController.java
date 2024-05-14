@@ -16,7 +16,6 @@ import origin.project.server.service.NamingService;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -181,12 +180,16 @@ public class NamingServerController {
     @GetMapping("/file-location/{file-name}")
     public InetAddress getFileLocation(@PathVariable("file-name") String fileName) {
         logger.info("GET /file-location/" + fileName);
+
         if (namingRepository.count() < 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No nodes available in the system.");
         }
         if (fileName == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ERROR: name cannot be null.");
         }
+
+        fileName = fileName.replace("\"", "");
+
         int fileHash = namingService.hashingFunction(fileName);
 
         InetAddress ownerNode = namingService.findOwner(fileHash);
