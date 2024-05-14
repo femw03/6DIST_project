@@ -47,7 +47,7 @@ public class ReplicationService {
     @PostConstruct
     public void init() {
         new Thread(() -> {
-            while (!node.isDiscoveryFinished()) {
+            while (!node.isDiscoveryFinished() || node.getExistingNodes() < 2) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
@@ -64,6 +64,11 @@ public class ReplicationService {
     }
 
     public void actualInit() throws UnknownHostException{
+        // allows for local testing
+//        System.out.println(node.getNamingServerIp());
+//        if (node.getNamingServerIp() == null) {
+//            node.setNamingServerIp(InetAddress.getByName("127.0.0.1"));
+//        }
 
         FOLDER_PATH = node.getFolderPath();
         localFileFolder = new File(FOLDER_PATH);
@@ -123,6 +128,13 @@ public class ReplicationService {
         for (String fileName : replicationMap.keySet()) {
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
+            String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
+            System.out.println(fileTransferUrl + ": " + fileName);
+
+            // create file-byteStream
+            File file = new File("data/" + fileName);
+            byte[] fileBytes = fileService.fileToBytes(file);
+
             fileService.sendFiles(targetIP,fileName);
         }
     }
@@ -184,6 +196,7 @@ public class ReplicationService {
                 if (file.isDirectory()) {
                     scanFolder(file, fileNames);
                 } else {
+
                     Path target = Paths.get(file.getPath());
                     Path relativePath = baseFolder.relativize(target);
 

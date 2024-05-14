@@ -73,7 +73,7 @@ public class ShutdownService {
         }
     }
 
-    private void updateFiles(InetAddress IPaddress) {
+    private void updateFiles(InetAddress IPaddress) throws UnknownHostException {
         ArrayList<String> fileNames = new ArrayList<>();
         File replicatedFileFolder = new File(node.getReplicatedFolderPath());
         replicationService.scanFolder(replicatedFileFolder, fileNames);

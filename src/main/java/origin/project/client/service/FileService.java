@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -80,26 +81,35 @@ public class FileService {
         return bytesArray;
     }
 
-    public void sendFiles(InetAddress targetIP, String fileName) {
+    public void sendFiles(InetAddress targetIP, String fileName) throws UnknownHostException {
         // set transfer-endpoint
         String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
         System.out.println(fileTransferUrl + ": " + fileName);
 
         // create file-byteStream
-        File file = new File( node.getReplicatedFolderPath() + "/" + fileName);
+        //File file = new File( node.getReplicatedFolderPath() + "/" + fileName);
+        File file = new File( node.getFolderPath() + "/" + fileName);
         byte[] fileBytes = fileToBytes(file);
 
         // create Filetransfer-object and serialize
         Gson gson = new Gson();
-        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + targetIP;
+        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + targetIP.getHostAddress();
+        logger.info("URLhash: " + URLhash);
         String hashIDString = messageService.getRequest(URLhash, "get hashID");
+        logger.info("getting hash by ip: " + hashIDString);
         int targetID = Integer.parseInt(hashIDString);
         LogEntry entry = new LogEntry(file,targetID,node.getCurrentID());
         FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, entry);
         String fileTransferJson = gson.toJson(fileTransfer);
 
         // send request
-        String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
-        System.out.println(response);
+        logger.info("target IP = " + targetIP + " node ip = " + node.getIpAddress());
+        if(!targetIP.equals(node.getIpAddress())) {
+            String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
+            System.out.println(response);
+        }
+        else{
+            System.out.println("trying to send to self!!!");
+        }
     }
 }

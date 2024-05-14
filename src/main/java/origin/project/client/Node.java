@@ -38,7 +38,6 @@ public class Node {
     private String folderPath;
     @Value("${replicatedfiles.path}")
     private String replicatedFolderPath;
-
     private int currentID;
     private int nextID=-1;
     private int previousID=-1;

@@ -1,4 +1,4 @@
-package origin.project.client.agents;
+/*package origin.project.client.agents;
 
 import jade.core.AID;
 import jade.core.Agent;
@@ -61,4 +61,4 @@ public class FailureAgent extends Agent {
                     + failingNodeName + " to " + newOwnerName);
         }
     }
-}
+}*/
