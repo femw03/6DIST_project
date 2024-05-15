@@ -34,8 +34,8 @@ public class ReplicationController {
 
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
-    @PostMapping("/transfer")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
+    @PostMapping("/transfer-file")
+    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
@@ -64,6 +64,25 @@ public class ReplicationController {
         }
 
         return ResponseEntity.ok("File " + fileTransfer.getFileName() + " received successfully.");
+    }
+
+    @DeleteMapping("/remove-file")
+    public ResponseEntity<String> removeNode(@RequestBody FileTransfer fileTransfer) {
+        String name = fileTransfer.getFileName();
+
+        if (name == null || name.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fileName for delete is blank");
+        }
+
+        if (!fileService.fileExists(name)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File " + name + " not found.");
+        }
+
+        if (fileService.fileDeleted(name)) {
+            return new ResponseEntity<>(name + "deleted successfully", HttpStatus.OK);
+        }
+
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File " + name + " could not be deleted.");
     }
 
 }

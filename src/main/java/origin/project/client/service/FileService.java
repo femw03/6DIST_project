@@ -1,5 +1,7 @@
 package origin.project.client.service;
 
+import lombok.Getter;
+import lombok.Setter;
 import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,11 +13,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
+
+@Getter
+@Setter
 @Service
 public class FileService {
     @Autowired
@@ -25,12 +34,15 @@ public class FileService {
     private Map<String, LogEntry> log = new HashMap<>();
 
 
+    private Path dataBaseFolder;
+
     Logger logger = Logger.getLogger(FileService.class.getName());
     public void createFileFromTransfer(FileTransfer fileTransfer) {
-        String fileName = node.getReplicatedFolderPath() + "/" + fileTransfer.getFileName();
+        String fileName =  dataBaseFolder + "/" + fileTransfer.getFileName();
+        System.out.println(fileName);
         byte[] fileContent = fileTransfer.getFile();
 
-        // If file directory doesn't exist
+        // if file directory doesn't exist
         String directoryPath = fileName.substring(0, fileName.lastIndexOf(File.separator));
         File directory = new File(directoryPath);
         if (!directory.exists()) {
@@ -101,5 +113,38 @@ public class FileService {
         // send request
         String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
         System.out.println(response);
+    }
+
+    public void scanFolder(File folder, ArrayList<String> fileNames) {
+        // files in the folder
+        File[] files = folder.listFiles();
+
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    scanFolder(file, fileNames);
+                } else {
+
+                    Path target = Paths.get(file.getPath());
+                    Path relativePath = dataBaseFolder.relativize(target);
+
+                    fileNames.add(relativePath.toString());
+                }
+            }
+        }
+    }
+
+    public boolean fileExists(String fileName) {
+        // Create a Path object
+        Path path = Paths.get(dataBaseFolder + fileName);
+
+        // Check if the file exists
+        return Files.exists(path);
+    }
+
+    public boolean fileDeleted(String fileName) {
+        File file = new File(dataBaseFolder + fileName);
+
+        return file.delete();
     }
 }
