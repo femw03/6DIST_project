@@ -1,22 +1,22 @@
 package origin.project.client.model.dto;
 
-import origin.project.client.Node;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-import java.io.File;
+import java.net.InetAddress;
 
+@Getter
+@Setter
+@ToString
 public class LogEntry {
-    private File file;
-    private int ownerNodeID;
-    private int downloadLocationID;
+    private String fileName;
+    private InetAddress ownerNodeID;
+    private InetAddress downloadLocationID;
 
-    public LogEntry(File file, int ownerNodeID, int downloadLocationID) {
-        this.file = file;
+    public LogEntry(String fileName, InetAddress ownerNodeID, InetAddress downloadLocationID) {
+        this.fileName = fileName;
         this.ownerNodeID = ownerNodeID;
         this.downloadLocationID = downloadLocationID;
-    }
-
-    @Override
-    public String toString() {
-        return "File: " + file.toString() + " with owner of file " + ownerNodeID + " and download location " + downloadLocationID;
     }
 }

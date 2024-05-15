@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
+import origin.project.client.model.dto.LogEntry;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
@@ -27,8 +28,6 @@ public class ReplicationService {
 
     @Autowired
     private MessageService messageService;
-
-
 
     @Autowired
     private FileService fileService;
@@ -216,8 +215,9 @@ public class ReplicationService {
         File file = new File("data/" + fileName);
         byte[] fileBytes = fileService.fileToBytes(file);
 
+        LogEntry log = new LogEntry(fileName, targetIP, node.getIpAddress());
         // create Filetransfer-object and serialize
-        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes);
+        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, log);
         String fileTransferJson = gson.toJson(fileTransfer);
 
         // send request
