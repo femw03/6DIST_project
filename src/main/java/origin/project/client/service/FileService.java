@@ -1,39 +1,39 @@
 package origin.project.client.service;
 
-import com.google.gson.Gson;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.stereotype.Service;
-import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
-import origin.project.client.model.dto.LogEntry;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
+
+@Getter
+@Setter
 @Service
 public class FileService {
-    @Autowired
-    private Node node;
-    @Autowired
-    private MessageService messageService;
-    private Map<String, LogEntry> log = new HashMap<>();
 
+    private Path dataBaseFolder;
 
     Logger logger = Logger.getLogger(FileService.class.getName());
+
     public void createFileFromTransfer(FileTransfer fileTransfer) {
-        String fileName = node.getReplicatedFolderPath() + "/" + fileTransfer.getFileName();
+        String fileName =  dataBaseFolder + "/" + fileTransfer.getFileName();
+        System.out.println(fileName);
         byte[] fileContent = fileTransfer.getFile();
 
-        // If file directory doesn't exist
+        // if file directory doesn't exist
         String directoryPath = fileName.substring(0, fileName.lastIndexOf(File.separator));
         File directory = new File(directoryPath);
+        System.out.println(directory);
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
                 logger.info("Failed to create directory: " + directoryPath);
@@ -49,14 +49,6 @@ public class FileService {
         } catch (IOException e) {
             System.err.println("Error creating file: " + e.getMessage());
         }
-
-        // Update log with references for the file
-        Map<String, LogEntry> log = node.getLog();
-        if (log == null) {
-            log = new HashMap<>();
-        }
-        log.put(file.getName(),fileTransfer.getLog());
-        node.setLog(log);
     }
 
     public byte[] fileToBytes(File file) {
@@ -81,35 +73,36 @@ public class FileService {
         return bytesArray;
     }
 
-    public void sendFiles(InetAddress targetIP, String fileName) throws UnknownHostException {
-        // set transfer-endpoint
-        String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
-        System.out.println(fileTransferUrl + ": " + fileName);
+    public void scanFolder(File folder, ArrayList<String> fileNames) {
+        // files in the folder
+        File[] files = folder.listFiles();
 
-        // create file-byteStream
-        //File file = new File( node.getReplicatedFolderPath() + "/" + fileName);
-        File file = new File( node.getFolderPath() + "/" + fileName);
-        byte[] fileBytes = fileToBytes(file);
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    scanFolder(file, fileNames);
+                } else {
 
-        // create Filetransfer-object and serialize
-        Gson gson = new Gson();
-        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + targetIP.getHostAddress();
-        logger.info("URLhash: " + URLhash);
-        String hashIDString = messageService.getRequest(URLhash, "get hashID");
-        logger.info("getting hash by ip: " + hashIDString);
-        int targetID = Integer.parseInt(hashIDString);
-        LogEntry entry = new LogEntry(file,targetID,node.getCurrentID());
-        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, entry);
-        String fileTransferJson = gson.toJson(fileTransfer);
+                    Path target = Paths.get(file.getPath());
+                    Path relativePath = dataBaseFolder.relativize(target);
 
-        // send request
-        logger.info("target IP = " + targetIP + " node ip = " + node.getIpAddress());
-        if(!targetIP.equals(node.getIpAddress())) {
-            String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
-            System.out.println(response);
+                    fileNames.add(relativePath.toString());
+                }
+            }
         }
-        else{
-            System.out.println("trying to send to self!!!");
-        }
+    }
+
+    public boolean fileExists(String fileName) {
+        // Create a Path object
+        Path path = Paths.get(dataBaseFolder + fileName);
+
+        // Check if the file exists
+        return Files.exists(path);
+    }
+
+    public boolean fileDeleted(String fileName) {
+        File file = new File(dataBaseFolder + fileName);
+
+        return file.delete();
     }
 }
