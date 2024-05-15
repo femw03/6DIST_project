@@ -12,4 +12,5 @@ import lombok.Setter;
 public class FileTransfer {
     private String fileName;
     private byte[] file;
+    private LogEntry logEntry;
 }
