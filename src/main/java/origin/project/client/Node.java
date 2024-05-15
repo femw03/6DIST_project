@@ -5,7 +5,6 @@ import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import origin.project.client.service.filelogs.FileLogRepository;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -47,8 +46,6 @@ public class Node {
     private String FILE_PATH;
     @Value("${node.directory}")
     private String DIRECTORY;
-    @Autowired
-    private FileLogRepository fileLogRepository;
 
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);
