@@ -2,7 +2,9 @@ package origin.project.client.service;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 
 import java.io.File;
@@ -20,13 +22,13 @@ import java.util.logging.Logger;
 @Setter
 @Service
 public class FileService {
-
-    private Path dataBaseFolder;
+    @Autowired
+    Node node;
 
     Logger logger = Logger.getLogger(FileService.class.getName());
 
-    public void createFileFromTransfer(FileTransfer fileTransfer) {
-        String fileName =  dataBaseFolder + "/" + fileTransfer.getFileName();
+    public void createFileFromTransfer(FileTransfer fileTransfer, Path folder) {
+        String fileName =  folder + "/" + fileTransfer.getFileName();
         System.out.println(fileName);
         byte[] fileContent = fileTransfer.getFile();
 
@@ -73,35 +75,44 @@ public class FileService {
         return bytesArray;
     }
 
-    public void scanFolder(File folder, ArrayList<String> fileNames) {
+    /**
+     * Function to recursively scan a folder for files.
+     *
+     * @param folder    folder to scan
+     * @param root      path to which to relativize (e.g., /local-files or /replicated-files)
+     * @return
+     */
+    public ArrayList<String> scanFolder(File folder, Path root) {
+        ArrayList<String> fileNames = new ArrayList<>();
         // files in the folder
         File[] files = folder.listFiles();
 
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
-                    scanFolder(file, fileNames);
+                    fileNames.addAll(scanFolder(file, root));
                 } else {
 
                     Path target = Paths.get(file.getPath());
-                    Path relativePath = dataBaseFolder.relativize(target);
+                    Path relativePath = root.relativize(target);
 
                     fileNames.add(relativePath.toString());
                 }
             }
         }
+        return fileNames;
     }
 
     public boolean fileExists(String fileName) {
         // Create a Path object
-        Path path = Paths.get(dataBaseFolder + fileName);
+        Path path = Paths.get(node.getREPLICATED_FILES_PATH() + "/" + fileName);
 
         // Check if the file exists
         return Files.exists(path);
     }
 
     public boolean fileDeleted(String fileName) {
-        File file = new File(dataBaseFolder + fileName);
+        File file = new File(node.getREPLICATED_FILES_PATH() + "/" + fileName);
 
         return file.delete();
     }

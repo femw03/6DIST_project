@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
@@ -15,7 +14,6 @@ import java.io.File;
 import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,16 +32,13 @@ public class ReplicationService {
 
     private File localFileFolder;
 
-    private ArrayList<String> fileNames;
+    private ArrayList<String> currentLocalFiles;
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
     private String replicationBaseUrl;
 
     boolean updateThreadRunning = false;
-
-    @Value("${localfiles.path}")
-    private String FOLDER_PATH;
 
 
 
@@ -73,10 +68,9 @@ public class ReplicationService {
 //            node.setNamingServerIp(InetAddress.getByName("127.0.0.1"));
 //        }
 
-        localFileFolder = new File(FOLDER_PATH);
+        localFileFolder = new File(node.getLOCAL_FILES_PATH());
         // set folder path for data-files (e.g., /data/)
-        fileService.setDataBaseFolder(Paths.get(FOLDER_PATH));
-        fileNames = new ArrayList<>();
+        currentLocalFiles = new ArrayList<>();
 
         replicationBaseUrl = "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/replication";
 
@@ -99,24 +93,24 @@ public class ReplicationService {
     public void startUp() throws UnknownHostException {
         // get current files.
 
-        fileService.scanFolder(localFileFolder, fileNames);
+        currentLocalFiles = fileService.scanFolder(localFileFolder, localFileFolder.toPath());
 
-        logger.info("Found following files: " + fileNames);
+        logger.info("Found following files: " + currentLocalFiles);
 
 
-        if (fileNames.isEmpty()) {
+        if (currentLocalFiles.isEmpty()) {
             logger.info("Breaking replication start-up because no local files were found");
             return;
         }
 
-        Map<String, String> replicationMap = requestFileLocation(fileNames);
+        Map<String, String> replicationMap = requestFileLocation(currentLocalFiles);
 
         // send files to owner-node
         for (String fileName : replicationMap.keySet()) {
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
 
-            sendFile(targetIP, fileName);
+            sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH());
         }
     }
 
@@ -136,8 +130,8 @@ public class ReplicationService {
                         InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
 
                         // send file
-                        sendFile(targetIP, fileName);
-                        fileNames.add(fileName);
+                        sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH());
+                        currentLocalFiles.add(fileName);
                     } catch (UnknownHostException e) {
                         throw new RuntimeException(e);
                     }
@@ -152,7 +146,7 @@ public class ReplicationService {
 
                         // send file
                         deleteFile(targetIP, fileName);
-                        fileNames.remove(fileName);
+                        currentLocalFiles.remove(fileName);
                     } catch (UnknownHostException e) {
                         throw new RuntimeException(e);
                     }
@@ -174,24 +168,23 @@ public class ReplicationService {
      * @return map of fileName and int which indicates new (0) or deleted (1)
      */
     public Map<String, Integer> findUpdates() {
-        ArrayList<String> newFileList = new ArrayList<>();
+        ArrayList<String> newFileList = fileService.scanFolder(localFileFolder, localFileFolder.toPath());
 
         Map<String, Integer> updatedFilesMap = new HashMap<>();
 
         // get current files
-        fileService.scanFolder(localFileFolder, newFileList);
         System.out.println(newFileList);
-        System.out.println(fileNames);
+        System.out.println(currentLocalFiles);
 
         // added files = files in newList but not in saved list
         for (String fileName : newFileList) {
-            if (!fileNames.contains(fileName)) {
+            if (!currentLocalFiles.contains(fileName)) {
                 updatedFilesMap.put(fileName, 0);
             }
         }
 
         // deleted files = files in saved list but not in newList
-        for (String fileName : fileNames) {
+        for (String fileName : currentLocalFiles) {
             if (!newFileList.contains(fileName)) {
                 updatedFilesMap.put(fileName, 1);
             }
@@ -200,7 +193,7 @@ public class ReplicationService {
         return updatedFilesMap;
     }
 
-    public void sendFile(InetAddress targetIP, String fileName) throws UnknownHostException {
+    public void sendFile(InetAddress targetIP, String fileName, String root) throws UnknownHostException {
         Gson gson = new Gson();
 
         // don't send to yourself.
@@ -209,10 +202,10 @@ public class ReplicationService {
         }
 
         String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer-file";
-        System.out.println(fileTransferUrl + ": " + fileName);
 
         // create file-byteStream
-        File file = new File("data/" + fileName);
+        File file = new File(root + "/" + fileName);
+        System.out.println(fileTransferUrl + ": " + file.getPath());
         byte[] fileBytes = fileService.fileToBytes(file);
 
         LogEntry log = new LogEntry(fileName, targetIP, node.getIpAddress());
