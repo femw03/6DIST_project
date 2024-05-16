@@ -35,6 +35,7 @@ public class ReplicationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file");
         }
 
+        System.out.println(fileTransfer.getLogEntry());
         fileService.createFileFromTransfer(fileTransfer);
 
         return ResponseEntity.ok("File " + fileTransfer.getFileName() + " received successfully.");
