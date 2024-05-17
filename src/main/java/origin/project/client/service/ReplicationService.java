@@ -4,16 +4,19 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.model.dto.LogEntry;
+import origin.project.client.repository.LogRepository;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
 import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +33,8 @@ public class ReplicationService {
     @Autowired
     private FileService fileService;
 
+    @Autowired
+    private LogRepository logRepository;
     private File localFileFolder;
 
     private ArrayList<String> currentLocalFiles;
@@ -39,6 +44,9 @@ public class ReplicationService {
     private String replicationBaseUrl;
 
     boolean updateThreadRunning = false;
+
+    @Value("${localfiles.path}")
+    private String FOLDER_PATH;
 
 
 
@@ -74,6 +82,8 @@ public class ReplicationService {
 
         replicationBaseUrl = "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/replication";
 
+        System.out.println("local path: " + localFileFolder);
+        System.out.println("replicated path: " + node.getREPLICATED_FILES_PATH());
         // verify local files and send hash-values to naming server
         startUp();
 
@@ -202,6 +212,7 @@ public class ReplicationService {
         }
 
         String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer-file";
+        System.out.println(fileTransferUrl + ": " + fileName);
 
         // create file-byteStream
         File file = new File(root + "/" + fileName);
@@ -209,6 +220,9 @@ public class ReplicationService {
         byte[] fileBytes = fileService.fileToBytes(file);
 
         LogEntry log = new LogEntry(fileName, targetIP, node.getIpAddress());
+
+        logRepository.save(log); //test ?????
+
         // create Filetransfer-object and serialize
         FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, log);
         String fileTransferJson = gson.toJson(fileTransfer);

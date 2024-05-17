@@ -48,7 +48,7 @@ public class ShutdownService {
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
             // Update files
-                updateFiles(IPpreviousInet);
+                updateFilesAtTermination(IPpreviousInet);
 
                 // Sending
                 if (previousID == nextID) {                                         // Only 2 nodes in network
@@ -73,23 +73,41 @@ public class ShutdownService {
         }
     }
 
-    private void updateFiles(InetAddress IPaddress) throws UnknownHostException {
-        ArrayList<String> fileNames = new ArrayList<>();
-        File replicatedFileFolder = new File(node.getReplicatedFolderPath());
-        replicationService.scanFolder(replicatedFileFolder, fileNames);
-        logger.info("Found replicated files: " + fileNames);
+    private void updateFilesAtTermination(InetAddress IPaddress) throws UnknownHostException {
+        logger.info("bla bla bla bla bla bla bla");
+        ArrayList<String> currentLocalFiles = new ArrayList<>();
+        File replicatedFileFolder = new File(node.getREPLICATED_FILES_PATH());
+        currentLocalFiles = fileService.scanFolder(replicatedFileFolder, replicatedFileFolder.toPath());
+        logger.info("Found replicated files: " + currentLocalFiles);
 
-        if (fileNames.isEmpty()) {
+        if (currentLocalFiles.isEmpty()) {
             logger.info("Breaking replication shutdown because no replicated files were found");
             return;
         }
 
         // TCP transfer of all files in fileNames send to IPaddress
-        for (String fileName : fileNames) {
-            fileService.sendFiles(IPaddress,fileName);
+        for (String fileName : currentLocalFiles) {
+            // add if statement to prevent sending file to replicated folder of official owner
+            replicationService.sendFile(IPaddress,fileName,node.getREPLICATED_FILES_PATH());
         }
 
-        // Transfer file log of every replicated node to new node + update
 
+        // Transfer file log of every replicated node to new node + update
+        System.out.println("message shutdown send !!!");
+        messageService.sendMulticastMessage("shutting down");
+
+        /*
+        ArrayList<String> fileNames = new ArrayList<>();
+        fileNames = fileService.scanFolder(replicatedFileFolder);
+
+        //send to previous
+        int preID = node.getPreviousID();
+        String URLpre = node.getNamingServerUrl() + "/get-IP-by-hash/" + preID;
+        String IPpre = messageService.getRequest(URLpre, "get previous ip");
+        IPpre = IPpre.replace("\"", "");              // remove double quotes
+
+        for(String file : fileNames) {
+            replicationService.sendFile(InetAddress.getByName(IPpre),file);
+        }*/
     }
 }

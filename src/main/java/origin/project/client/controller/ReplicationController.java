@@ -11,6 +11,7 @@ import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.service.FileService;
 
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
@@ -28,7 +29,7 @@ public class ReplicationController {
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
     @PostMapping("/transfer-file")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) {
+    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
