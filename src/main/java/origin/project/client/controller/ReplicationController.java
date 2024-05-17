@@ -7,9 +7,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.service.FileService;
 
+import java.nio.file.Path;
 import java.util.logging.Logger;
 
 @Getter
@@ -19,6 +21,9 @@ import java.util.logging.Logger;
 public class ReplicationController {
     @Autowired
     FileService fileService;
+
+    @Autowired
+    Node node;
 
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
@@ -36,7 +41,7 @@ public class ReplicationController {
         }
 
         System.out.println(fileTransfer.getLogEntry());
-        fileService.createFileFromTransfer(fileTransfer);
+        fileService.createFileFromTransfer(fileTransfer, Path.of(node.getREPLICATED_FILES_PATH()));
 
         return ResponseEntity.ok("File " + fileTransfer.getFileName() + " received successfully.");
     }
