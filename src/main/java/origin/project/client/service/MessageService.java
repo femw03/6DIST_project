@@ -4,24 +4,26 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.model.dto.LogEntry;
+import origin.project.client.repository.LogRepository;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Logger;
 
 @Service
 public class MessageService {
     @Autowired
     private Node node;
-
+    @Autowired
+    private LogRepository logRepository;
     private static int PORT;
     private static String MULTICAST_GROUP;
     private MulticastSocket socket;
+    @Autowired
+    FileService fileService;
     Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
@@ -86,10 +88,43 @@ public class MessageService {
                 logger.info("Received discovery message");
                 processDiscoveryMessage(message, senderIPAddress);
             }
+        } else if (parts[0].equals("shutting down")) {
+            // Process shutdown message
+            logger.info("Received shutdown multicast from : " + senderIPAddress);
+            processShutdownMessage(message, senderIPAddress);
         } else {
             // Process unicast message
             logger.info("Received unicast");
             processUnicastMessage(message,senderIPAddress);
+        }
+    }
+
+    private void processShutdownMessage(String message, InetAddress senderIPAddress) throws IOException {
+        if(!senderIPAddress.equals(node.getIpAddress())) {
+            System.out.println("enter processShutdownMessage");
+            String[] parts = message.split(",");
+            File replicatedFileFolder = new File(node.getREPLICATED_FILES_PATH());
+            System.out.println("replicatedFileFolder : " + replicatedFileFolder);
+            ArrayList<String> currentReplicatedFiles = new ArrayList<>();
+            ArrayList<String> remoteFiles = new ArrayList<>();
+
+            //remoteFiles = log.findAll(senderIPAddress) // should find all files originating from senderIP
+
+            currentReplicatedFiles = fileService.scanFolder(replicatedFileFolder, replicatedFileFolder.toPath());
+            System.out.println("currentReplicatedFiles : " + currentReplicatedFiles);
+            List<LogEntry> localLog = logRepository.findAllByOwnerNodeID(senderIPAddress);
+
+            System.out.println("Locallog : " + localLog + " log : " + logRepository.findAll());
+            for (LogEntry entry : localLog) {
+                String fileName = node.getREPLICATED_FILES_PATH() + "/" + entry.getFileName();
+                String destination = node.getLOCAL_FILES_PATH() + "/" + entry.getFileName();
+                System.out.println("file entry : " + entry);
+                if (fileService.fileExists(fileName)) {
+                    System.out.println("found file!!!");
+                    fileService.moveFile(fileName, destination);
+                }
+                // remove and send to local folder instead of replicated folder!
+            }
         }
     }
 

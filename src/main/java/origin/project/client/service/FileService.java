@@ -1,20 +1,28 @@
 package origin.project.client.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
+import origin.project.client.model.dto.LogEntry;
+import origin.project.client.repository.LogRepository;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 
@@ -23,7 +31,11 @@ import java.util.logging.Logger;
 @Service
 public class FileService {
     @Autowired
-    Node node;
+    private Node node;
+    //private Map<String, LogEntry> log = new HashMap<>(); // try to use h2 database instead!!! Makes searching easier!!!!
+    @Autowired
+    private LogRepository logRepository;
+    private Path dataBaseFolder;
 
     Logger logger = Logger.getLogger(FileService.class.getName());
 
@@ -51,6 +63,9 @@ public class FileService {
         } catch (IOException e) {
             System.err.println("Error creating file: " + e.getMessage());
         }
+
+        // Add to log
+        logRepository.save(fileTransfer.getLogEntry());
     }
 
     public byte[] fileToBytes(File file) {
@@ -115,5 +130,58 @@ public class FileService {
         File file = new File(node.getREPLICATED_FILES_PATH() + "/" + fileName);
 
         return file.delete();
+    }
+
+    /*public void sendFiles(InetAddress targetIP, String fileName) throws UnknownHostException {
+        Gson gson = new GsonBuilder().setPrettyPrinting()
+                .excludeFieldsWithoutExposeAnnotation()
+                .create();
+
+        if (targetIP.equals(node.getIpAddress())){
+            return;
+        }
+
+        // set transfer-endpoint
+        String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer-file";
+        System.out.println(fileTransferUrl + ": " + fileName);
+
+        // create file-byteStream
+        File file = new File( node.getFolderPath() + "/" + fileName);
+        byte[] fileBytes = fileToBytes(file);
+
+        // create Filetransfer-object and serialize
+        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + targetIP.getHostAddress();
+        String hashIDString = messageService.getRequest(URLhash, "get hashID");
+        int targetID = Integer.parseInt(hashIDString);
+        LogEntry entry = new LogEntry(fileName, node.getIpAddress(), targetIP);
+        logger.info("filetransfer: " + fileName + " " + entry + " " + gson.toJson(entry));// + " " + fileBytes + " " + gson.toJson(entry));
+        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, entry);
+        logger.info("filetransfer : " + fileTransfer);
+        String fileTransferJson = gson.toJson(fileTransfer);
+
+        // send request
+        String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
+        System.out.println(response);
+    }*/
+
+    public boolean moveFile(String fileName, String destination) throws IOException {
+        // if file directory doesn't exist
+        String directoryPath = fileName.substring(0, fileName.lastIndexOf(File.separator));
+        File directory = new File(directoryPath);
+        System.out.println("Entered move file! directory : " + directory);
+        if (!directory.exists()) {
+            if (!directory.mkdirs()) {
+                logger.info("Failed to create directory: " + directoryPath);
+                return false;
+            }
+        }
+        // Path to the source file
+        Path sourceFile = Paths.get(fileName);
+
+        // Path to the target directory
+        Path targetDirectory = Paths.get(destination);
+
+        Path movedFile = Files.move(sourceFile, targetDirectory.resolve(sourceFile.getFileName()));
+        return movedFile != null;
     }
 }
