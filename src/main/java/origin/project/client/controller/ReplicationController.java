@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
+import origin.project.client.repository.LogRepository;
 import origin.project.client.service.FileService;
 
 import java.net.UnknownHostException;
@@ -21,15 +22,18 @@ import java.util.logging.Logger;
 @RequestMapping("/replication")
 public class ReplicationController {
     @Autowired
-    FileService fileService;
+    private FileService fileService;
 
     @Autowired
-    Node node;
+    private Node node;
+
+    @Autowired
+    private LogRepository logRepository;
 
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
     @PostMapping("/transfer-file")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
+    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
@@ -44,26 +48,43 @@ public class ReplicationController {
         System.out.println(fileTransfer.getLogEntry());
         fileService.createFileFromTransfer(fileTransfer, Path.of(node.getREPLICATED_FILES_PATH()));
 
+        // Add to log
+        logRepository.save(fileTransfer.getLogEntry());
+
+        System.out.println("Current log-entries: " + logRepository.findAll());
+
         return ResponseEntity.ok("File " + fileTransfer.getFileName() + " received successfully.");
     }
 
     @DeleteMapping("/remove-file")
-    public ResponseEntity<String> removeNode(@RequestBody FileTransfer fileTransfer) {
+    public ResponseEntity<String> nodeInformsToRemoveFile(@RequestBody FileTransfer fileTransfer) {
+        logger.info("remove-file " + fileTransfer);
         String name = fileTransfer.getFileName();
 
         if (name == null || name.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fileName for delete is blank");
         }
 
-        if (!fileService.fileExists(name)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File " + name + " not found.");
-        }
+        String filePath = node.getREPLICATED_FILES_PATH() + "/" + name;
+        logger.info("Attempt remove-file for " + filePath);
 
-        if (fileService.fileDeleted(name)) {
-            return new ResponseEntity<>(name + "deleted successfully", HttpStatus.OK);
+        if (!fileService.fileExists(filePath)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File " + name + " not found in path " + filePath + ".");
         }
+        logger.info(filePath + " exists");
 
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File " + name + " could not be deleted.");
+        if (!fileService.fileDeleted(filePath)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File " + filePath + " could not be deleted.");
+        }
+        logger.info(filePath + " deleted");
+
+        if (!logRepository.existsByFileName(name)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Failed to delete log-entry for " + filePath + ".");
+        }
+        logger.info("log-entry for " + filePath + " deleted");
+
+        logRepository.deleteByFileName(name);
+        return new ResponseEntity<>(name + " deleted successfully.", HttpStatus.OK);
     }
 
 }
