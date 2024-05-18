@@ -7,23 +7,29 @@ import origin.project.client.Node;
 import origin.project.client.model.dto.LogEntry;
 import origin.project.client.repository.LogRepository;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
 public class MessageService {
     @Autowired
     private Node node;
-    @Autowired
-    private LogRepository logRepository;
     private static int PORT;
     private static String MULTICAST_GROUP;
     private MulticastSocket socket;
     @Autowired
     FileService fileService;
+
+    @Autowired
+    private LogRepository logRepository;
+
     Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
@@ -91,7 +97,9 @@ public class MessageService {
         } else if (parts[0].equals("shutting down")) {
             // Process shutdown message
             logger.info("Received shutdown multicast from : " + senderIPAddress);
-            processShutdownMessage(message, senderIPAddress);
+            if(!senderIPAddress.equals(node.getIpAddress())) {
+                processShutdownMessage(senderIPAddress);
+            }
         } else {
             // Process unicast message
             logger.info("Received unicast");
@@ -99,32 +107,31 @@ public class MessageService {
         }
     }
 
-    private void processShutdownMessage(String message, InetAddress senderIPAddress) throws IOException {
-        if(!senderIPAddress.equals(node.getIpAddress())) {
-            System.out.println("enter processShutdownMessage");
-            String[] parts = message.split(",");
-            File replicatedFileFolder = new File(node.getREPLICATED_FILES_PATH());
-            System.out.println("replicatedFileFolder : " + replicatedFileFolder);
-            ArrayList<String> currentReplicatedFiles = new ArrayList<>();
-            ArrayList<String> remoteFiles = new ArrayList<>();
+    public void processShutdownMessage(InetAddress senderIPAddress) throws IOException {
+        logger.info("Start processing Shutdown of node : " + senderIPAddress);
 
-            //remoteFiles = log.findAll(senderIPAddress) // should find all files originating from senderIP
+        // find logEntries with terminating node as download-location
+        List<LogEntry> entriesTerminatingNode = logRepository.findAllByDownloadLocationID(senderIPAddress);
+        System.out.println("entries terminating node " + senderIPAddress + ": " + entriesTerminatingNode);
 
-            currentReplicatedFiles = fileService.scanFolder(replicatedFileFolder, replicatedFileFolder.toPath());
-            System.out.println("currentReplicatedFiles : " + currentReplicatedFiles);
-            List<LogEntry> localLog = logRepository.findAllByOwnerNodeID(senderIPAddress);
+        // for each entry : move file from replication to local and remove.
+        for (LogEntry entry : entriesTerminatingNode) {
+            String sourceFile = node.getREPLICATED_FILES_PATH() + "/" + entry.getFileName();
+            String destinationFile = node.getLOCAL_FILES_PATH() + "/" + entry.getFileName();
 
-            System.out.println("Locallog : " + localLog + " log : " + logRepository.findAll());
-            for (LogEntry entry : localLog) {
-                String fileName = node.getREPLICATED_FILES_PATH() + "/" + entry.getFileName();
-                String destination = node.getLOCAL_FILES_PATH() + "/" + entry.getFileName();
-                System.out.println("file entry : " + entry);
-                if (fileService.fileExists(fileName)) {
-                    System.out.println("found file!!!");
-                    fileService.moveFile(fileName, destination);
-                }
-                // remove and send to local folder instead of replicated folder!
+            if (!fileService.moveFile(sourceFile, destinationFile)) {
+                logger.info("Failed to move " + sourceFile + " to " + destinationFile);
+                continue;
             }
+
+            if (!logRepository.existsByFileName(entry.getFileName())) {
+                logger.info("No log-entry for " + entry.getFileName());
+                continue;
+            }
+            logRepository.deleteByFileName(entry.getFileName());
+
+            logger.info("Move of " + sourceFile + " to " + destinationFile + "successful");
+            // remove and send to local folder instead of replicated folder!
         }
     }
 
