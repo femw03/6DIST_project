@@ -23,9 +23,6 @@ public class LogEntry {
     private String fileName;
     private InetAddress ownerNodeID;
     private InetAddress downloadLocationID;
-    @Id
-    @GeneratedValue
-    private Long id;
 
     public LogEntry(String fileName, InetAddress ownerNodeID, InetAddress downloadLocationID) {
         this.fileName = fileName;
