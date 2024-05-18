@@ -13,13 +13,12 @@ import origin.project.client.repository.LogRepository;
 import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 @Service
@@ -39,15 +38,11 @@ public class ReplicationService {
 
     private ArrayList<String> currentLocalFiles;
 
-    Logger logger = Logger.getLogger(NamingServerController.class.getName());
+    Logger logger = Logger.getLogger(ReplicationService.class.getName());
 
     private String replicationBaseUrl;
 
     boolean updateThreadRunning = false;
-
-    @Value("${localfiles.path}")
-    private String FOLDER_PATH;
-
 
 
     @PostConstruct
@@ -120,7 +115,7 @@ public class ReplicationService {
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
 
-            sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH());
+            sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
         }
     }
 
@@ -140,7 +135,7 @@ public class ReplicationService {
                         InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
 
                         // send file
-                        sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH());
+                        sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
                         currentLocalFiles.add(fileName);
                     } catch (UnknownHostException e) {
                         throw new RuntimeException(e);
@@ -203,10 +198,9 @@ public class ReplicationService {
         return updatedFilesMap;
     }
 
-    public void sendFile(InetAddress targetIP, String fileName, String root) throws UnknownHostException {
+    public void sendFile(InetAddress targetIP, String fileName, String root, InetAddress downloadLocation) throws UnknownHostException {
         Gson gson = new Gson();
 
-        // don't send to yourself.
         if (targetIP.equals(node.getIpAddress())) {
             return;
         }
@@ -219,9 +213,9 @@ public class ReplicationService {
         System.out.println(fileTransferUrl + ": " + file.getPath());
         byte[] fileBytes = fileService.fileToBytes(file);
 
-        LogEntry log = new LogEntry(fileName, targetIP, node.getIpAddress());
+        LogEntry log = new LogEntry(fileName, targetIP, downloadLocation);
 
-        logRepository.save(log); //test ?????
+//        logRepository.save(log); //test ?????
 
         // create Filetransfer-object and serialize
         FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, log);
@@ -274,4 +268,59 @@ public class ReplicationService {
         Type type = new TypeToken<HashMap<String, String>>() {}.getType();
         return new Gson().fromJson(replicationMapJSON, type);
     }
+
+    public void processShuttingDown(InetAddress prevNodeIP) throws UnknownHostException {
+        // process replicated files : send replicated to previous node
+        sendReplicatedFilesToPrevious(prevNodeIP);
+
+        // process local files : if files were download, update location
+
+
+
+    }
+
+    public void sendReplicatedFilesToPrevious(InetAddress prevNodeIP) throws UnknownHostException {
+        logger.info("Start sending files to previous node");
+
+        File replicatedFileFolder = new File(node.getREPLICATED_FILES_PATH());
+        ArrayList<String> replicatedFiles = fileService.scanFolder(replicatedFileFolder, replicatedFileFolder.toPath());
+
+        logger.info("Found replicated files: " + replicatedFiles);
+
+        if (replicatedFiles.isEmpty()) {
+            logger.info("Breaking replication shutdown because no replicated files were found");
+            return;
+        }
+
+        // TCP transfer of all files in fileNames send to IPaddress
+        for (String fileName : replicatedFiles) {
+            Optional<LogEntry> optionalLogEntry = logRepository.findByFileName(fileName);
+
+            if(optionalLogEntry.isEmpty()) {
+                logger.info("ShutDown - Failed to find logEntry for " + fileName);
+                return;
+            }
+
+            InetAddress downloadLocation = optionalLogEntry.get().getDownloadLocationID();
+
+            // add if statement to prevent sending file to replicated folder of official owner
+            sendFile(prevNodeIP, fileName, node.getREPLICATED_FILES_PATH(), downloadLocation);
+        }
+
+        /*
+        ArrayList<String> fileNames = new ArrayList<>();
+        fileNames = fileService.scanFolder(replicatedFileFolder);
+
+        //send to previous
+        int preID = node.getPreviousID();
+        String URLpre = node.getNamingServerUrl() + "/get-IP-by-hash/" + preID;
+        String IPpre = messageService.getRequest(URLpre, "get previous ip");
+        IPpre = IPpre.replace("\"", "");              // remove double quotes
+
+        for(String file : fileNames) {
+            replicationService.sendFile(InetAddress.getByName(IPpre),file);
+        }*/
+    }
+
+
 }
