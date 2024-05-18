@@ -119,24 +119,27 @@ public class FileService {
         return file.delete();
     }
 
-    public boolean moveFile(String fileName, String destination) throws IOException {
-        // if file directory doesn't exist
-        String directoryPath = fileName.substring(0, fileName.lastIndexOf(File.separator));
-        File directory = new File(directoryPath);
-        System.out.println("Entered move file! directory : " + directory);
-        if (!directory.exists()) {
-            if (!directory.mkdirs()) {
-                logger.info("Failed to create directory: " + directoryPath);
+    public boolean moveFile(String sourceFile, String destinationFile) throws IOException {
+        // does file exist
+        if (!fileExists(sourceFile)) {
+            logger.info("Move " + sourceFile + " failed. Could not find file");
+            return false;
+        }
+
+        // if destination directory doesn't exist, try to mkdirs.
+        String destinationDirectoryPath = destinationFile.substring(0, destinationFile.lastIndexOf(File.separator));;
+        File destinationDirectory = new File(destinationDirectoryPath);
+        if (!destinationDirectory.exists()) {
+            if (!destinationDirectory.mkdirs()) {
+                logger.info("Move " + sourceFile + " failed. Failed to create directory: " + destinationDirectory);
                 return false;
             }
         }
-        // Path to the source file
-        Path sourceFile = Paths.get(fileName);
 
-        // Path to the target directory
-        Path targetDirectory = Paths.get(destination);
+        Path sourcePath = Paths.get(sourceFile);
+        Path targetPath = Paths.get(destinationFile);
+        Files.move(sourcePath, targetPath);
 
-        Path movedFile = Files.move(sourceFile, targetDirectory.resolve(sourceFile.getFileName()));
-        return movedFile != null;
+        return true;
     }
 }
