@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
-import origin.project.client.repository.LogRepository;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -127,7 +126,7 @@ public class FileService {
         }
 
         // if destination directory doesn't exist, try to mkdirs.
-        String destinationDirectoryPath = destinationFile.substring(0, destinationFile.lastIndexOf(File.separator));;
+        String destinationDirectoryPath = destinationFile.substring(0, destinationFile.lastIndexOf(File.separator));
         File destinationDirectory = new File(destinationDirectoryPath);
         if (!destinationDirectory.exists()) {
             if (!destinationDirectory.mkdirs()) {

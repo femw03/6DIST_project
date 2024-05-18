@@ -4,21 +4,20 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.model.dto.LogEntry;
 import origin.project.client.repository.LogRepository;
-import origin.project.server.controller.NamingServerController;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 @Service

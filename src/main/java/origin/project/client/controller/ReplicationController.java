@@ -12,7 +12,6 @@ import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.repository.LogRepository;
 import origin.project.client.service.FileService;
 
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
