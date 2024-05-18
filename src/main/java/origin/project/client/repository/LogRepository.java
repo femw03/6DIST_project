@@ -8,7 +8,7 @@ import java.util.List;
 
 
 public interface LogRepository extends CrudRepository<LogEntry, Integer> {
-    public List<LogEntry> findAllByDownloadLocationID(InetAddress downloadLocationID);
+    List<LogEntry> findAllByDownloadLocationID(InetAddress downloadLocationID);
 
-    public List<LogEntry> findAllByOwnerNodeID(InetAddress ownerID);
+    List<LogEntry> findAllByOwnerNodeID(InetAddress ownerID);
 }
