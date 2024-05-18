@@ -1,16 +1,12 @@
 package origin.project.client.service;
 
-import com.google.gson.Gson;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
-import origin.project.client.model.dto.FileTransfer;
 
-
-import java.io.File;
-import java.net.*;
-import java.util.ArrayList;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 @Service
@@ -21,8 +17,7 @@ public class ShutdownService {
     private MessageService messageService;
     @Autowired
     private ReplicationService replicationService;
-    @Autowired
-    FileService fileService;
+
     Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
     @PreDestroy
@@ -48,7 +43,10 @@ public class ShutdownService {
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
             // Update files
-                updateFilesAtTermination(IPpreviousInet);
+                replicationService.processShuttingDown(IPpreviousInet);
+                // Transfer file log of every replicated node to new node + update
+                System.out.println("message shutdown send !!!");
+                messageService.sendMulticastMessage("shutting down");
 
                 // Sending
                 if (previousID == nextID) {                                         // Only 2 nodes in network
@@ -72,42 +70,5 @@ public class ShutdownService {
             throw new RuntimeException(e);
         }
     }
-
-    private void updateFilesAtTermination(InetAddress IPaddress) throws UnknownHostException {
-        logger.info("bla bla bla bla bla bla bla");
-        ArrayList<String> currentLocalFiles = new ArrayList<>();
-        File replicatedFileFolder = new File(node.getREPLICATED_FILES_PATH());
-        currentLocalFiles = fileService.scanFolder(replicatedFileFolder, replicatedFileFolder.toPath());
-        logger.info("Found replicated files: " + currentLocalFiles);
-
-        if (currentLocalFiles.isEmpty()) {
-            logger.info("Breaking replication shutdown because no replicated files were found");
-            return;
-        }
-
-        // TCP transfer of all files in fileNames send to IPaddress
-        for (String fileName : currentLocalFiles) {
-            // add if statement to prevent sending file to replicated folder of official owner
-            replicationService.sendFile(IPaddress,fileName,node.getREPLICATED_FILES_PATH());
-        }
-
-
-        // Transfer file log of every replicated node to new node + update
-        System.out.println("message shutdown send !!!");
-        messageService.sendMulticastMessage("shutting down");
-
-        /*
-        ArrayList<String> fileNames = new ArrayList<>();
-        fileNames = fileService.scanFolder(replicatedFileFolder);
-
-        //send to previous
-        int preID = node.getPreviousID();
-        String URLpre = node.getNamingServerUrl() + "/get-IP-by-hash/" + preID;
-        String IPpre = messageService.getRequest(URLpre, "get previous ip");
-        IPpre = IPpre.replace("\"", "");              // remove double quotes
-
-        for(String file : fileNames) {
-            replicationService.sendFile(InetAddress.getByName(IPpre),file);
-        }*/
-    }
+    // moved replication-shutdownProcess to replicationService.
 }
