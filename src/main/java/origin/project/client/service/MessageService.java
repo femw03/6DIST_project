@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.model.dto.LogEntry;
+import origin.project.client.repository.LogRepository;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -11,7 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -19,12 +21,15 @@ import java.util.logging.Logger;
 public class MessageService {
     @Autowired
     private Node node;
-    @Autowired
-    private FileService fileService;
-
     private static int PORT;
     private static String MULTICAST_GROUP;
     private MulticastSocket socket;
+    @Autowired
+    FileService fileService;
+
+    @Autowired
+    private LogRepository logRepository;
+
     Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
@@ -85,18 +90,48 @@ public class MessageService {
             processMulticastMessage(message, senderIPAddress);
         } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
             // Process discovery message only if necessary
-            if (node.getPreviousID() == -1 || node.getNextID() == -1) {
+            if (node.getPreviousID()==-1 || node.getNextID()==-1) {
                 logger.info("Received discovery message");
                 processDiscoveryMessage(message, senderIPAddress);
             }
-        } else if (parts[0].equals("ShutdownMessage")){
-            // Process message from terminated node
-            logger.info("Received shutdown message to update file logs");
-            processShutdownMessage(message, senderIPAddress);
+        } else if (parts[0].equals("shutting down")) {
+            // Process shutdown message
+            logger.info("Received shutdown multicast from : " + senderIPAddress);
+            if(!senderIPAddress.equals(node.getIpAddress())) {
+                processShutdownMessage(senderIPAddress);
+            }
         } else {
             // Process unicast message
             logger.info("Received unicast");
             processUnicastMessage(message,senderIPAddress);
+        }
+    }
+
+    public void processShutdownMessage(InetAddress senderIPAddress) throws IOException {
+        logger.info("Start processing Shutdown of node : " + senderIPAddress);
+
+        // find logEntries with terminating node as download-location
+        List<LogEntry> entriesTerminatingNode = logRepository.findAllByDownloadLocationID(senderIPAddress);
+        System.out.println("entries terminating node " + senderIPAddress + ": " + entriesTerminatingNode);
+
+        // for each entry : move file from replication to local and remove.
+        for (LogEntry entry : entriesTerminatingNode) {
+            String sourceFile = node.getREPLICATED_FILES_PATH() + "/" + entry.getFileName();
+            String destinationFile = node.getLOCAL_FILES_PATH() + "/" + entry.getFileName();
+
+            if (!fileService.moveFile(sourceFile, destinationFile)) {
+                logger.info("Failed to move " + sourceFile + " to " + destinationFile);
+                continue;
+            }
+
+            if (!logRepository.existsByFileName(entry.getFileName())) {
+                logger.info("No log-entry for " + entry.getFileName());
+                continue;
+            }
+            logRepository.deleteByFileName(entry.getFileName());
+
+            logger.info("Move of " + sourceFile + " to " + destinationFile + "successful");
+            // remove and send to local folder instead of replicated folder!
         }
     }
 
@@ -275,26 +310,6 @@ public class MessageService {
         // Enable ping after updating node ID (because of failure)
         Thread.sleep(2000);         // wait until IDs are updated
         node.setPingEnable(true);
-    }
-
-    private void processShutdownMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {
-        logger.info("Processing shutdown message from node with IP address "+senderIPAddress.toString());
-        // Extract previousID from terminated node
-        String[] parts = multicastMessage.split(",");
-
-        if (parts.length != 2) {
-            throw new IOException("Invalid shutdown message format");
-        }
-
-        /*Map<String,InetAddress> logTerminatedNode = parts[1];
-        InetAddress ownerIP = InetAddress.getByName(parts[2]);
-
-        if (ownerIP == node.getIpAddress()) {
-            node.getReplicatedLog().remove(filename);
-            fileService.relocateFile(filename);
-        } else {
-            node.getReplicatedLog().put(filename,ownerIP);
-        }*/
     }
 
     public void sendMessage(InetAddress receiverIP, int currentID, int targetID) throws UnknownHostException, InterruptedException {

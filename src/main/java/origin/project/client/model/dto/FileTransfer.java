@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.net.InetAddress;
-
 @Getter
 @Setter
 @AllArgsConstructor
@@ -14,6 +12,5 @@ import java.net.InetAddress;
 public class FileTransfer {
     private String fileName;
     private byte[] file;
-    private InetAddress downloadLocation;
-
+    private LogEntry logEntry;
 }

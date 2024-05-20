@@ -1,4 +1,4 @@
-package origin.project.client.agents;
+/*package origin.project.client.agents;
 
 
 import jade.core.AID;
@@ -101,3 +101,4 @@ public class SyncAgent extends Agent {
 
 
 }
+*/
