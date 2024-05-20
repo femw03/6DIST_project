@@ -18,11 +18,9 @@ public class PingService {
     @Autowired
     private FailureService failureService;
     static Logger logger = Logger.getLogger(PingService.class.getName());
-    int i;
 
     public PingService(Node node) {
         this.node = node;
-
         new Thread(this::Ping).start();
     }
 

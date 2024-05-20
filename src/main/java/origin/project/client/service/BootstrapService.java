@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 
@@ -23,6 +24,8 @@ public class BootstrapService {
         try {
             String message = "newNode," + node.getNodeName() + "," + node.getIpAddress(); // Combine name and IP address
             messageService.sendMulticastMessage(message);
+            node.setLocalLog(new HashMap<>());
+            node.setReplicatedLog(new HashMap<>());
         }
         catch (IOException e) {
             e.printStackTrace();

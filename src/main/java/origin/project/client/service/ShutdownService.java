@@ -73,10 +73,10 @@ public class ShutdownService {
         }
     }
 
-    private void updateFiles(InetAddress IPaddress) {
+    private void updateFiles(InetAddress IPaddress) throws UnknownHostException {
         ArrayList<String> fileNames = new ArrayList<>();
         File replicatedFileFolder = new File(node.getReplicatedFolderPath());
-        replicationService.scanFolder(replicatedFileFolder, fileNames);
+        fileService.scanFolder(replicatedFileFolder, fileNames);
         logger.info("Found replicated files: " + fileNames);
 
         if (fileNames.isEmpty()) {
@@ -86,10 +86,10 @@ public class ShutdownService {
 
         // TCP transfer of all files in fileNames send to IPaddress
         for (String fileName : fileNames) {
-            fileService.sendFiles(IPaddress,fileName);
+            fileService.sendFiles(IPaddress,fileName,node.getReplicatedFolderPath());
         }
 
-        // Transfer file log of every replicated node to new node + update
-
+        String message = "ShutdownMessage,"+node.getLocalLog();
+        messageService.sendMulticastMessage(message);
     }
 }

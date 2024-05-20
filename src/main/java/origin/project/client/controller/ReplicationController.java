@@ -35,7 +35,7 @@ public class ReplicationController {
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
     @PostMapping("/transfer-file")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) {
+    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
@@ -49,7 +49,7 @@ public class ReplicationController {
 
         ArrayList<String> fileNames = new ArrayList<>();
         File localFileFolder = new File(node.getFolderPath());
-        replicationService.scanFolder(localFileFolder, fileNames);
+        fileService.scanFolder(localFileFolder, fileNames);
         logger.info("Found local files: " + fileNames);
 
         if (fileNames.contains(name)) {         // file already stored locally on node
@@ -58,7 +58,7 @@ public class ReplicationController {
             // Because of GET request, IP is converted to string with extra double quotes ("")
             IPprevious = IPprevious.replace("\"", "");              // remove double quotes
             InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
-            fileService.sendFiles(IPpreviousInet,name);
+            fileService.sendFiles(IPpreviousInet,name,node.getReplicatedFolderPath());
         } else {
             fileService.createFileFromTransfer(fileTransfer);
         }

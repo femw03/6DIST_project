@@ -7,12 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
-import origin.project.client.model.dto.LogEntry;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,14 +31,11 @@ public class FileService {
     private Node node;
     @Autowired
     private MessageService messageService;
-    private Map<String, LogEntry> log = new HashMap<>();
-
-
     private Path dataBaseFolder;
 
     Logger logger = Logger.getLogger(FileService.class.getName());
     public void createFileFromTransfer(FileTransfer fileTransfer) {
-        String fileName =  dataBaseFolder + "/" + fileTransfer.getFileName();
+        String fileName =  node.getReplicatedFolderPath() + "/" + fileTransfer.getFileName();
         System.out.println(fileName);
         byte[] fileContent = fileTransfer.getFile();
 
@@ -62,12 +59,8 @@ public class FileService {
         }
 
         // Update log with references for the file
-        Map<String, LogEntry> log = node.getLog();
-        if (log == null) {
-            log = new HashMap<>();
-        }
-        log.put(file.getName(),fileTransfer.getLog());
-        node.setLog(log);
+        node.getReplicatedLog().put(fileName,fileTransfer.getDownloadLocation());
+        logger.info("Repliacted files log: "+node.getReplicatedLog());
     }
 
     public byte[] fileToBytes(File file) {
@@ -92,22 +85,24 @@ public class FileService {
         return bytesArray;
     }
 
-    public void sendFiles(InetAddress targetIP, String fileName) {
+    public void sendFiles(InetAddress targetIP, String fileName, String pathFolder) throws UnknownHostException {
+        // don't send to yourself.
+        if (targetIP.equals(node.getIpAddress())) {
+            return;
+        }
+
         // set transfer-endpoint
-        String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer";
+        String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer-file";
         System.out.println(fileTransferUrl + ": " + fileName);
 
         // create file-byteStream
-        File file = new File( node.getReplicatedFolderPath() + "/" + fileName);
+        File file = new File(pathFolder + "/" + fileName);
         byte[] fileBytes = fileToBytes(file);
 
         // create Filetransfer-object and serialize
         Gson gson = new Gson();
-        String URLhash = node.getNamingServerUrl() + "/get-hash-by-IP/" + targetIP;
-        String hashIDString = messageService.getRequest(URLhash, "get hashID");
-        int targetID = Integer.parseInt(hashIDString);
-        LogEntry entry = new LogEntry(file,targetID,node.getCurrentID());
-        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, entry);
+
+        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, node.getIpAddress());
         String fileTransferJson = gson.toJson(fileTransfer);
 
         // send request
@@ -144,7 +139,10 @@ public class FileService {
 
     public boolean fileDeleted(String fileName) {
         File file = new File(dataBaseFolder + fileName);
-
         return file.delete();
+    }
+
+    public void relocateFile(String fileName) {
+        // remove file from replicated folder + put it in local folder
     }
 }

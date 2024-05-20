@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -18,6 +19,8 @@ import java.util.logging.Logger;
 public class MessageService {
     @Autowired
     private Node node;
+    @Autowired
+    private FileService fileService;
 
     private static int PORT;
     private static String MULTICAST_GROUP;
@@ -82,10 +85,14 @@ public class MessageService {
             processMulticastMessage(message, senderIPAddress);
         } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
             // Process discovery message only if necessary
-            if (node.getPreviousID()==-1 || node.getNextID()==-1) {
+            if (node.getPreviousID() == -1 || node.getNextID() == -1) {
                 logger.info("Received discovery message");
                 processDiscoveryMessage(message, senderIPAddress);
             }
+        } else if (parts[0].equals("ShutdownMessage")){
+            // Process message from terminated node
+            logger.info("Received shutdown message to update file logs");
+            processShutdownMessage(message, senderIPAddress);
         } else {
             // Process unicast message
             logger.info("Received unicast");
@@ -268,6 +275,26 @@ public class MessageService {
         // Enable ping after updating node ID (because of failure)
         Thread.sleep(2000);         // wait until IDs are updated
         node.setPingEnable(true);
+    }
+
+    private void processShutdownMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {
+        logger.info("Processing shutdown message from node with IP address "+senderIPAddress.toString());
+        // Extract previousID from terminated node
+        String[] parts = multicastMessage.split(",");
+
+        if (parts.length != 2) {
+            throw new IOException("Invalid shutdown message format");
+        }
+
+        /*Map<String,InetAddress> logTerminatedNode = parts[1];
+        InetAddress ownerIP = InetAddress.getByName(parts[2]);
+
+        if (ownerIP == node.getIpAddress()) {
+            node.getReplicatedLog().remove(filename);
+            fileService.relocateFile(filename);
+        } else {
+            node.getReplicatedLog().put(filename,ownerIP);
+        }*/
     }
 
     public void sendMessage(InetAddress receiverIP, int currentID, int targetID) throws UnknownHostException, InterruptedException {

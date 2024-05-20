@@ -19,31 +19,23 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
 public class ReplicationService {
     @Autowired
-    Node node;
-
+    private Node node;
     @Autowired
-    MessageService messageService;
+    private MessageService messageService;
     @Autowired
-    FileService fileService;
-
-    String FOLDER_PATH;
-
-    Path baseFolder;
-
-    File localFileFolder;
-
-    ArrayList<String> fileNames;
-
-    Logger logger = Logger.getLogger(NamingServerController.class.getName());
-
-    String replicationBaseUrl;
-
-    boolean updateThreadRunning = false;
+    private FileService fileService;
+    private String FOLDER_PATH;
+    private File localFileFolder;
+    private ArrayList<String> fileNames;
+    private Logger logger = Logger.getLogger(NamingServerController.class.getName());
+    private String replicationBaseUrl;
+    private boolean updateThreadRunning = false;
 
     @PostConstruct
     public void init() {
@@ -65,12 +57,6 @@ public class ReplicationService {
     }
 
     public void actualInit() throws UnknownHostException{
-        // allows for local testing
-//        System.out.println(node.getNamingServerIp());
-//        if (node.getNamingServerIp() == null) {
-//            node.setNamingServerIp(InetAddress.getByName("127.0.0.1"));
-//        }
-
         FOLDER_PATH = node.getFolderPath();
         localFileFolder = new File(FOLDER_PATH);
         // set folder path for data-files (e.g., /data/)
@@ -85,9 +71,6 @@ public class ReplicationService {
         // start update thread
         updateThreadRunning = true;
         updateThread();
-
-
-
     }
 
 
@@ -96,12 +79,9 @@ public class ReplicationService {
     //  - Report hash-values to naming server
     //  - Transfer files to the owner-nodes.
     public void startUp() throws UnknownHostException {
-        // get current files.
-
+        // get local files.
         fileService.scanFolder(localFileFolder, fileNames);
-
         logger.info("Found following files: " + fileNames);
-
 
         if (fileNames.isEmpty()) {
             logger.info("Breaking replication start-up because no local files were found");
@@ -114,8 +94,8 @@ public class ReplicationService {
         for (String fileName : replicationMap.keySet()) {
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
-
-            sendFile(targetIP, fileName);
+            node.getLocalLog().put(fileName,targetIP);
+            fileService.sendFiles(targetIP, fileName,node.getFolderPath());
         }
     }
 
@@ -124,6 +104,7 @@ public class ReplicationService {
             // check updates
             Map<String, Integer> updatedFiles = findUpdates();
             logger.info("found update :" + updatedFiles.keySet());
+            logger.info("Initial local files log: "+node.getLocalLog());
 
             // report updates
             for (String fileName : updatedFiles.keySet()) {
@@ -135,13 +116,14 @@ public class ReplicationService {
                         InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
 
                         // send file
-                        sendFile(targetIP, fileName);
+                        fileService.sendFiles(targetIP, fileName,node.getFolderPath());
                         fileNames.add(fileName);
+                        node.getLocalLog().put(fileName,targetIP);
                     } catch (UnknownHostException e) {
                         throw new RuntimeException(e);
                     }
                 }
-                    // delete file
+                // delete file
                 if (updatedFiles.get(fileName) == 1) {
                     try {
                         ArrayList<String> names = new ArrayList<>();
@@ -152,12 +134,13 @@ public class ReplicationService {
                         // send file
                         deleteFile(targetIP, fileName);
                         fileNames.remove(fileName);
+                        node.getLocalLog().remove(fileName);
                     } catch (UnknownHostException e) {
                         throw new RuntimeException(e);
                     }
                 }
             }
-
+            logger.info("Updated local files log: "+node.getLocalLog());
             // every 10 seconds
             try {
                 Thread.sleep(10000);
@@ -174,7 +157,6 @@ public class ReplicationService {
      */
     public Map<String, Integer> findUpdates() {
         ArrayList<String> newFileList = new ArrayList<>();
-
         Map<String, Integer> updatedFilesMap = new HashMap<>();
 
         // get current files
@@ -195,32 +177,7 @@ public class ReplicationService {
                 updatedFilesMap.put(fileName, 1);
             }
         }
-
         return updatedFilesMap;
-    }
-
-    public void sendFile(InetAddress targetIP, String fileName) throws UnknownHostException {
-        Gson gson = new Gson();
-
-        // don't send to yourself.
-        if (targetIP.equals(node.getIpAddress())) {
-            return;
-        }
-
-        String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer-file";
-        System.out.println(fileTransferUrl + ": " + fileName);
-
-        // create file-byteStream
-        File file = new File("data/" + fileName);
-        byte[] fileBytes = fileService.fileToBytes(file);
-
-        // create Filetransfer-object and serialize
-        FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes);
-        String fileTransferJson = gson.toJson(fileTransfer);
-
-        // send request
-        String response = messageService.postRequest(fileTransferUrl, fileTransferJson, "transfer file");
-        System.out.println(response);
     }
 
     public void deleteFile(InetAddress targetIP, String fileName) throws UnknownHostException {

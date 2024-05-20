@@ -4,11 +4,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import origin.project.client.model.dto.LogEntry;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Map;
 
 @Getter
@@ -45,7 +44,8 @@ public class Node {
     private boolean discoveryFinished = false;
     private int existingNodes=0;
     private boolean pingEnable=false;
-    private Map<String, LogEntry> log;
+    private Map<String, InetAddress> replicatedLog;     // <fileName, downloadLocation>
+    private Map<String, InetAddress> localLog;          // <fileName, replicatedNode>
 
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);
