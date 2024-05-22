@@ -51,10 +51,12 @@ public class PingService {
                     if (previousID != -1 && node.getExistingNodes() > 1) {
                         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
                         String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
-                        IPprevious = IPprevious.replace("\"", "");              // remove double quotes
-                        InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
-                        //PING
-                        pingNode(IPpreviousInet);
+                        if(IPprevious != null) {
+                            IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+                            InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
+                            //PING
+                            pingNode(IPpreviousInet);
+                        }
                     }
 
                 }

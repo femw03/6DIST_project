@@ -3,6 +3,7 @@ package origin.project.client.service;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+@Getter
 @Service
 public class ReplicationService {
     @Autowired
@@ -320,6 +322,13 @@ public class ReplicationService {
             replicationService.sendFile(InetAddress.getByName(IPpre),file);
         }*/
     }
-
+    public void sendFileToPrevious(FileTransfer fileTransfer) throws UnknownHostException {
+        String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getPreviousID();
+        String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
+        IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+        if (IPprevious != null) {
+            sendFile(InetAddress.getByName(IPprevious), fileTransfer.getFileName(), node.getLOCAL_FILES_PATH(), fileTransfer.getLogEntry().getDownloadLocationID());
+        }
+    }
 
 }
