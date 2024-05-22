@@ -47,6 +47,7 @@ public class Node {
     private boolean discoveryFinished = false;
     private int existingNodes=0;
     private boolean pingEnable=false;
+    private boolean newNode = false;
     private Map<String, LogEntry> log;
 
     public InetAddress getIpAddress() throws UnknownHostException {

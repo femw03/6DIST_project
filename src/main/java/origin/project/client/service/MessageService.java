@@ -26,7 +26,6 @@ public class MessageService {
     private MulticastSocket socket;
     @Autowired
     FileService fileService;
-
     @Autowired
     private LogRepository logRepository;
 
@@ -87,6 +86,7 @@ public class MessageService {
         if (parts[0].equals("newNode")) {
             // Process multicast message
             logger.info("Received multicast");
+            node.setNewNode(true);
             processMulticastMessage(message, senderIPAddress);
         } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
             // Process discovery message only if necessary
@@ -233,6 +233,7 @@ public class MessageService {
         // Calculate hash of node that sent multicast message
         String url_sender = node.getNamingServerUrl() + "/get-hash/" + senderName;
         int senderHash = Integer.parseInt(Objects.requireNonNull(getRequest(url_sender, "get sender hash")));
+
 
         // Calculate hash of this node's name and IP address (assuming these are set in the Node class)
         String url_current = node.getNamingServerUrl() + "/get-hash/" + node.getNodeName();

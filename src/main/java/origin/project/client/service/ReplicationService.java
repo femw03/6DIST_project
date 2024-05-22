@@ -120,8 +120,35 @@ public class ReplicationService {
         }
     }
 
-    public void updateThread() {
+    public void sendReplicatedFilesToNewNode() throws UnknownHostException {
+        // get filename of replicated files
+        ArrayList<String> replicatedFiles = new ArrayList<>();
+        for (LogEntry e : logRepository.findAll()) {
+            replicatedFiles.add(e.getFileName());
+        }
+
+        // request replication locations from namingserver
+        Map<String, String> replicationMap = requestFileLocation(replicatedFiles);
+
+
+        for (String fileName : replicationMap.keySet()) {
+            InetAddress newLocation = InetAddress.getByName(replicationMap.get(fileName));
+            if (!newLocation.equals(node.getIpAddress())) {
+                // set transfer-endpoint
+                InetAddress targetIP = newLocation;
+                sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
+                logRepository.deleteByFileName(fileName);
+            }
+
+
+        }
+    }
+
+    public void updateThread() throws UnknownHostException {
         while(updateThreadRunning) {
+            if (node.isNewNode()) {
+                sendReplicatedFilesToNewNode();
+            }
             // check updates
             Map<String, Integer> updatedFiles = findUpdates();
             logger.info("found update :" + updatedFiles.keySet());
@@ -157,6 +184,8 @@ public class ReplicationService {
                         throw new RuntimeException(e);
                     }
                 }
+
+
             }
 
             // every 10 seconds
