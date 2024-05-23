@@ -5,8 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 
-
-import java.net.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 @Service
@@ -15,6 +15,9 @@ public class ShutdownService {
     private Node node;
     @Autowired
     private MessageService messageService;
+    @Autowired
+    private ReplicationService replicationService;
+
     Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
     @PreDestroy
@@ -39,13 +42,20 @@ public class ShutdownService {
                 IPprevious = IPprevious.replace("\"", "");              // remove double quotes
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
-            // Sending
+            // Update files
+
+                // Transfer file log of every replicated node to new node + update
+                System.out.println("message shutdown send !!!");
+                messageService.sendMulticastMessage("shutting down");
+
+                // Sending
                 if (previousID == nextID) {                                         // Only 2 nodes in network
                     messageService.sendMessage(IPnextInet, -1, -1);
                 } else {
                     messageService.sendMessage(IPnextInet, previousID, -1);
                     messageService.sendMessage(IPpreviousInet, -1, nextID);
                 }
+                replicationService.processShuttingDown(IPpreviousInet);
             }
 
             // remove node
@@ -61,4 +71,5 @@ public class ShutdownService {
             throw new RuntimeException(e);
         }
     }
+    // moved replication-shutdownProcess to replicationService.
 }

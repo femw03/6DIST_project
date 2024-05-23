@@ -5,10 +5,13 @@ import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import origin.project.client.model.dto.LogEntry;
 
 import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -33,14 +36,21 @@ public class Node {
     private String nodeName;
     @Value("${ipAddress}")
     private String ipAddress;
+
+    @Value("${localfiles.path}")
+    private String LOCAL_FILES_PATH;
+
+    @Value("${replicatedfiles.path}")
+    private String REPLICATED_FILES_PATH;
+
     private int currentID;
     private int nextID=-1;
     private int previousID=-1;
-
     private boolean discoveryFinished = false;
-
     private int existingNodes=0;
     private boolean pingEnable=false;
+    private boolean newNode = false;
+    private Map<String, LogEntry> log;
 
     @Value("${node.filepath}")
     private String FILE_PATH;

@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.model.dto.LogEntry;
+import origin.project.client.repository.LogRepository;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -11,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -18,10 +21,14 @@ import java.util.logging.Logger;
 public class MessageService {
     @Autowired
     private Node node;
-
     private static int PORT;
     private static String MULTICAST_GROUP;
     private MulticastSocket socket;
+    @Autowired
+    FileService fileService;
+    @Autowired
+    private LogRepository logRepository;
+
     Logger logger = Logger.getLogger(MessageService.class.getName());
 
 
@@ -79,6 +86,7 @@ public class MessageService {
         if (parts[0].equals("newNode")) {
             // Process multicast message
             logger.info("Received multicast");
+            node.setNewNode(true);
             processMulticastMessage(message, senderIPAddress);
         } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
             // Process discovery message only if necessary
@@ -86,10 +94,44 @@ public class MessageService {
                 logger.info("Received discovery message");
                 processDiscoveryMessage(message, senderIPAddress);
             }
+        } else if (parts[0].equals("shutting down")) {
+            // Process shutdown message
+            logger.info("Received shutdown multicast from : " + senderIPAddress);
+            if(!senderIPAddress.equals(node.getIpAddress())) {
+                processShutdownMessage(senderIPAddress);
+            }
         } else {
             // Process unicast message
             logger.info("Received unicast");
             processUnicastMessage(message,senderIPAddress);
+        }
+    }
+
+    public void processShutdownMessage(InetAddress senderIPAddress) throws IOException {
+        logger.info("Start processing Shutdown of node : " + senderIPAddress);
+
+        // find logEntries with terminating node as download-location
+        List<LogEntry> entriesTerminatingNode = logRepository.findAllByDownloadLocationID(senderIPAddress);
+        System.out.println("entries terminating node " + senderIPAddress + ": " + entriesTerminatingNode);
+
+        // for each entry : move file from replication to local and remove.
+        for (LogEntry entry : entriesTerminatingNode) {
+            String sourceFile = node.getREPLICATED_FILES_PATH() + "/" + entry.getFileName();
+            String destinationFile = node.getLOCAL_FILES_PATH() + "/" + entry.getFileName();
+
+            if (!fileService.moveFile(sourceFile, destinationFile)) {
+                logger.info("Failed to move " + sourceFile + " to " + destinationFile);
+                continue;
+            }
+
+            if (!logRepository.existsByFileName(entry.getFileName())) {
+                logger.info("No log-entry for " + entry.getFileName());
+                continue;
+            }
+            logRepository.deleteByFileName(entry.getFileName());
+
+            logger.info("Move of " + sourceFile + " to " + destinationFile + "successful");
+            // remove and send to local folder instead of replicated folder!
         }
     }
 
@@ -191,6 +233,7 @@ public class MessageService {
         // Calculate hash of node that sent multicast message
         String url_sender = node.getNamingServerUrl() + "/get-hash/" + senderName;
         int senderHash = Integer.parseInt(Objects.requireNonNull(getRequest(url_sender, "get sender hash")));
+
 
         // Calculate hash of this node's name and IP address (assuming these are set in the Node class)
         String url_current = node.getNamingServerUrl() + "/get-hash/" + node.getNodeName();

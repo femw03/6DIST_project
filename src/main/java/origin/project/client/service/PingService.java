@@ -39,20 +39,24 @@ public class PingService {
                     if (nextID != -1 && node.getExistingNodes() > 1) { //added check for existing node count, because seems to get into 'if statement' sometimes when he shouldn't
                         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
                         String IPnext = messageService.getRequest(URLnext, "get next ip");
-                        IPnext = IPnext.replace("\"", "");              // remove double quotes
-                        InetAddress IPnextInet = InetAddress.getByName(IPnext);
-                        //PING
-                        pingNode(IPnextInet);
+                        if(IPnext != null) {
+                            IPnext = IPnext.replace("\"", "");              // remove double quotes
+                            InetAddress IPnextInet = InetAddress.getByName(IPnext);
+                            //PING
+                            pingNode(IPnextInet);
+                        }
                     }
 
                     // previous
                     if (previousID != -1 && node.getExistingNodes() > 1) {
                         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
                         String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
-                        IPprevious = IPprevious.replace("\"", "");              // remove double quotes
-                        InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
-                        //PING
-                        pingNode(IPpreviousInet);
+                        if(IPprevious != null) {
+                            IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+                            InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
+                            //PING
+                            pingNode(IPpreviousInet);
+                        }
                     }
 
                 }

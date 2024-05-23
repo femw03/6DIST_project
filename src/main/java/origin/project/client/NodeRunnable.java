@@ -2,7 +2,6 @@ package origin.project.client;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.scheduling.annotation.Async;
 
 @Async
@@ -24,7 +23,8 @@ public class NodeRunnable {
         // Set the arguments as system properties (optional but can be useful)
         System.setProperty("nodeName", nodeName);
         System.setProperty("ipAddress", ipAddress);
-        System.setProperty("localfiles.path", "data");
+        System.setProperty("localfiles.path", "data/local");
+        System.setProperty("replicatedfiles.path", "data/replicated");
 
         SpringApplication.run(origin.project.client.NodeRunnable.class, args);
 
