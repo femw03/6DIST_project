@@ -37,7 +37,8 @@ public class ReplicationService {
     private LogRepository logRepository;
     private File localFileFolder;
 
-    private ArrayList<String> currentLocalFiles;
+    //private ArrayList<String> currentLocalFiles;
+    private ArrayList<String> currentLocalFiles = new ArrayList<>();
 
     Logger logger = Logger.getLogger(ReplicationService.class.getName());
 
@@ -74,7 +75,7 @@ public class ReplicationService {
 
         localFileFolder = new File(node.getLOCAL_FILES_PATH());
         // set folder path for data-files (e.g., /data/)
-        currentLocalFiles = new ArrayList<>();
+        //currentLocalFiles = new ArrayList<>();
 
         replicationBaseUrl = "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/replication";
 
@@ -86,9 +87,6 @@ public class ReplicationService {
         // start update thread
         updateThreadRunning = true;
         updateThread();
-
-
-
     }
 
 
@@ -122,13 +120,13 @@ public class ReplicationService {
 
     public void sendReplicatedFilesToNewNode() throws UnknownHostException {
         // get filename of replicated files
-        ArrayList<String> replicatedFiles = new ArrayList<>();
+        Map<String,InetAddress> replicatedFiles = new HashMap<>();
         for (LogEntry e : logRepository.findAll()) {
-            replicatedFiles.add(e.getFileName());
+            replicatedFiles.put(e.getFileName(), e.getDownloadLocationID());
         }
 
         // request replication locations from namingserver
-        Map<String, String> replicationMap = requestFileLocation(replicatedFiles);
+        Map<String, String> replicationMap = requestFileLocation(new ArrayList<>(replicatedFiles.keySet()));
 
 
         for (String fileName : replicationMap.keySet()) {
@@ -136,18 +134,19 @@ public class ReplicationService {
             if (!newLocation.equals(node.getIpAddress())) {
                 // set transfer-endpoint
                 InetAddress targetIP = newLocation;
-                sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
+                sendFile(targetIP, fileName, node.getREPLICATED_FILES_PATH(), replicatedFiles.get(fileName)); // was local file path should be replicated???
                 logRepository.deleteByFileName(fileName);
+                deleteFile(node.getIpAddress(),fileName); // added!!!
             }
-
-
         }
     }
 
     public void updateThread() throws UnknownHostException {
         while(updateThreadRunning) {
             if (node.isNewNode()) {
+                logger.info("new node added to system, we are in replication :-)");
                 sendReplicatedFilesToNewNode();
+                node.setNewNode(false);
             }
             // check updates
             Map<String, Integer> updatedFiles = findUpdates();
@@ -184,8 +183,6 @@ public class ReplicationService {
                         throw new RuntimeException(e);
                     }
                 }
-
-
             }
 
             // every 10 seconds
@@ -304,9 +301,6 @@ public class ReplicationService {
         sendReplicatedFilesToPrevious(prevNodeIP);
 
         // process local files : if files were download, update location
-
-
-
     }
 
     public void sendReplicatedFilesToPrevious(InetAddress prevNodeIP) throws UnknownHostException {

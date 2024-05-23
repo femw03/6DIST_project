@@ -48,6 +48,7 @@ public class ReplicationController {
         if (file == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file");
         }
+
         if(replicationService.getCurrentLocalFiles().contains(name)){
             System.out.println("local file received from shutdown, sending to previous : " + name);
             replicationService.sendFileToPrevious(fileTransfer);
