@@ -15,6 +15,7 @@ import origin.project.client.service.ReplicationService;
 
 import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 @Getter
@@ -24,20 +25,17 @@ import java.util.logging.Logger;
 public class ReplicationController {
     @Autowired
     private FileService fileService;
-
     @Autowired
     private Node node;
-
     @Autowired
     private LogRepository logRepository;
-
     @Autowired
     private ReplicationService replicationService;
 
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
     @PostMapping("/transfer-file")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
+    public ResponseEntity<String> nodeReceivesFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
@@ -49,19 +47,17 @@ public class ReplicationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file");
         }
 
-        if(replicationService.getCurrentLocalFiles().contains(name)){
-            System.out.println("local file received from shutdown, sending to previous : " + name);
+        if (replicationService.getCurrentLocalFiles().contains(name)){
+            logger.info("Local file ("+ name +") received from node in shutdown, sending to previous node");
             replicationService.sendFileToPrevious(fileTransfer);
             return ResponseEntity.ok("File " + fileTransfer.getFileName() + " send to previous successfully.");
         }
 
-        System.out.println(fileTransfer.getLogEntry());
         fileService.createFileFromTransfer(fileTransfer, Path.of(node.getREPLICATED_FILES_PATH()));
 
         // Add to log
         logRepository.save(fileTransfer.getLogEntry());
-
-        System.out.println("Current log-entries: " + logRepository.findAll());
+        logger.info("Current log-entries: " + logRepository.findAll());
 
         return ResponseEntity.ok("File " + fileTransfer.getFileName() + " received successfully.");
     }

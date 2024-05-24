@@ -134,7 +134,7 @@ public class NamingServerController {
 
     @GetMapping("/get-IP-by-hash/{hashValue}")
     public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
-        logger.info("GET: /get-IP-by-hash/"+ hashValue);
+        //logger.info("GET: /get-IP-by-hash/"+ hashValue);
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashValue);
         if (optionalEntry.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Hash not found!");

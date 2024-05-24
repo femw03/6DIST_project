@@ -43,10 +43,9 @@ public class ShutdownService {
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
             // Update files
-
                 // Transfer file log of every replicated node to new node + update
-                System.out.println("message shutdown send !!!");
-                messageService.sendMulticastMessage("shutting down");
+                logger.info("Sending shutdown message");
+                messageService.sendMulticastMessage("Shutting down");
 
                 // Sending
                 if (previousID == nextID) {                                         // Only 2 nodes in network
@@ -71,5 +70,4 @@ public class ShutdownService {
             throw new RuntimeException(e);
         }
     }
-    // moved replication-shutdownProcess to replicationService.
 }

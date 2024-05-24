@@ -21,16 +21,14 @@ import java.util.logging.Logger;
 public class MessageService {
     @Autowired
     private Node node;
-    private static int PORT;
-    private static String MULTICAST_GROUP;
-    private MulticastSocket socket;
     @Autowired
     FileService fileService;
     @Autowired
     private LogRepository logRepository;
-
+    private static int PORT;
+    private static String MULTICAST_GROUP;
+    private MulticastSocket socket;
     Logger logger = Logger.getLogger(MessageService.class.getName());
-
 
     public MessageService(Node node) {
         this.node = node;
@@ -94,7 +92,7 @@ public class MessageService {
                 logger.info("Received discovery message");
                 processDiscoveryMessage(message, senderIPAddress);
             }
-        } else if (parts[0].equals("shutting down")) {
+        } else if (parts[0].equals("Shutting down")) {
             // Process shutdown message
             logger.info("Received shutdown multicast from : " + senderIPAddress);
             if(!senderIPAddress.equals(node.getIpAddress())) {
@@ -108,11 +106,11 @@ public class MessageService {
     }
 
     public void processShutdownMessage(InetAddress senderIPAddress) throws IOException {
-        logger.info("Start processing Shutdown of node : " + senderIPAddress);
+        logger.info("Start processing shutdown of node with IP address " + senderIPAddress);
 
         // find logEntries with terminating node as download-location
         List<LogEntry> entriesTerminatingNode = logRepository.findAllByDownloadLocationID(senderIPAddress);
-        System.out.println("entries terminating node " + senderIPAddress + ": " + entriesTerminatingNode);
+        logger.info("Entries terminating node (" + senderIPAddress + "): " + entriesTerminatingNode);
 
         // for each entry : move file from replication to local and remove.
         for (LogEntry entry : entriesTerminatingNode) {
@@ -130,8 +128,7 @@ public class MessageService {
             }
             logRepository.deleteByFileName(entry.getFileName());
 
-            logger.info("Move of " + sourceFile + " to " + destinationFile + "successful");
-            // remove and send to local folder instead of replicated folder!
+            logger.info("Successfully moved " + sourceFile + " to " + destinationFile);
         }
     }
 
@@ -363,9 +360,7 @@ public class MessageService {
 
         try {
             String output;
-
             URL url = new URL(endpoint);
-//            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("DELETE");
             connection.setRequestProperty("Content-Type", "application/json");
@@ -407,9 +402,7 @@ public class MessageService {
 
         try {
             String output;
-
             URL url = new URL(endpoint);
-//            System.out.println(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
