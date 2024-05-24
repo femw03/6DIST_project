@@ -49,10 +49,12 @@ public class PingService {
                     if (previousID != -1 && node.getExistingNodes() > 1) {
                         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
                         String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
-                        IPprevious = IPprevious.replace("\"", "");              // remove double quotes
-                        InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
-                        //PING
-                        pingNode(IPpreviousInet);
+                        if(IPprevious != null) {
+                            IPprevious = IPprevious.replace("\"", "");              // remove double quotes
+                            InetAddress IPpreviousInet = InetAddress.getByName(IPprevious);
+                            //PING
+                            pingNode(IPpreviousInet);
+                        }
                     }
 
                 }
@@ -64,7 +66,7 @@ public class PingService {
 
     public void pingNode(InetAddress receiverIP) throws UnknownHostException, InterruptedException {
         try (Socket socket = new Socket()) {
-            logger.info("Sending PING to "+receiverIP.getHostAddress());
+            //logger.info("Sending PING to "+receiverIP.getHostAddress());
             socket.connect(new InetSocketAddress(receiverIP.getHostName(), node.getNodePort()), 30);
         } catch (IOException e) {
             // Connection failed, handle the exception or throw it further

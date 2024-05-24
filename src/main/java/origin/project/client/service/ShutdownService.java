@@ -43,7 +43,7 @@ public class ShutdownService {
                 InetAddress IPpreviousInet =  InetAddress.getByName(IPprevious);
 
             // Update files
-                replicationService.processShuttingDown(IPpreviousInet);
+
                 // Transfer file log of every replicated node to new node + update
                 System.out.println("message shutdown send !!!");
                 messageService.sendMulticastMessage("shutting down");
@@ -55,6 +55,7 @@ public class ShutdownService {
                     messageService.sendMessage(IPnextInet, previousID, -1);
                     messageService.sendMessage(IPpreviousInet, -1, nextID);
                 }
+                replicationService.processShuttingDown(IPpreviousInet);
             }
 
             // remove node

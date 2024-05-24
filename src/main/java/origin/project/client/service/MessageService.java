@@ -26,7 +26,6 @@ public class MessageService {
     private MulticastSocket socket;
     @Autowired
     FileService fileService;
-
     @Autowired
     private LogRepository logRepository;
 
@@ -87,6 +86,7 @@ public class MessageService {
         if (parts[0].equals("newNode")) {
             // Process multicast message
             logger.info("Received multicast");
+            //node.setNewNode(true);
             processMulticastMessage(message, senderIPAddress);
         } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
             // Process discovery message only if necessary
@@ -234,6 +234,7 @@ public class MessageService {
         String url_sender = node.getNamingServerUrl() + "/get-hash/" + senderName;
         int senderHash = Integer.parseInt(Objects.requireNonNull(getRequest(url_sender, "get sender hash")));
 
+
         // Calculate hash of this node's name and IP address (assuming these are set in the Node class)
         String url_current = node.getNamingServerUrl() + "/get-hash/" + node.getNodeName();
         int currentHash = Integer.parseInt(Objects.requireNonNull(getRequest(url_current, "get current hash")));
@@ -278,6 +279,7 @@ public class MessageService {
         // Enable ping
         Thread.sleep(2000);         // wait until IDs are updated
         node.setPingEnable(true);
+        node.setNewNode(true); // test!!!
     }
 
     private void processDiscoveryMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {

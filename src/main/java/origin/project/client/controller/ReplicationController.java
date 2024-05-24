@@ -11,7 +11,9 @@ import origin.project.client.Node;
 import origin.project.client.model.dto.FileTransfer;
 import origin.project.client.repository.LogRepository;
 import origin.project.client.service.FileService;
+import origin.project.client.service.ReplicationService;
 
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
@@ -29,10 +31,13 @@ public class ReplicationController {
     @Autowired
     private LogRepository logRepository;
 
+    @Autowired
+    private ReplicationService replicationService;
+
     Logger logger = Logger.getLogger(origin.project.server.controller.ReplicationController.class.getName());
 
     @PostMapping("/transfer-file")
-    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) {
+    public ResponseEntity<String> nodeSendsFileTransfer(@RequestBody FileTransfer fileTransfer) throws UnknownHostException {
         logger.info("POST: /replication/transfer " + fileTransfer.getFileName());
         String name = fileTransfer.getFileName();
 
@@ -42,6 +47,12 @@ public class ReplicationController {
         byte[] file = fileTransfer.getFile();
         if (file == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file");
+        }
+
+        if(replicationService.getCurrentLocalFiles().contains(name)){
+            System.out.println("local file received from shutdown, sending to previous : " + name);
+            replicationService.sendFileToPrevious(fileTransfer);
+            return ResponseEntity.ok("File " + fileTransfer.getFileName() + " send to previous successfully.");
         }
 
         System.out.println(fileTransfer.getLogEntry());
