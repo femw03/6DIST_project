@@ -29,7 +29,7 @@ public class FileService {
 
     public void createFileFromTransfer(FileTransfer fileTransfer, Path folder) {
         String fileName =  folder + "/" + fileTransfer.getFileName();
-        System.out.println(fileName);
+        logger.info("Received file: "+fileName);
         byte[] fileContent = fileTransfer.getFile();
 
         // if file directory doesn't exist
@@ -93,10 +93,8 @@ public class FileService {
                 if (file.isDirectory()) {
                     fileNames.addAll(scanFolder(file, root));
                 } else {
-
                     Path target = Paths.get(file.getPath());
                     Path relativePath = root.relativize(target);
-
                     fileNames.add(relativePath.toString());
                 }
             }
@@ -114,7 +112,6 @@ public class FileService {
 
     public boolean fileDeleted(String filePath) {
         File file = new File(filePath);
-
         return file.delete();
     }
 

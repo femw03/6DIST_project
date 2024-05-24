@@ -26,26 +26,17 @@ import java.util.logging.Logger;
 public class ReplicationService {
     @Autowired
     private Node node;
-
     @Autowired
     private MessageService messageService;
-
     @Autowired
     private FileService fileService;
-
     @Autowired
     private LogRepository logRepository;
     private File localFileFolder;
-
-    //private ArrayList<String> currentLocalFiles;
     private ArrayList<String> currentLocalFiles = new ArrayList<>();
-
     Logger logger = Logger.getLogger(ReplicationService.class.getName());
-
     private String replicationBaseUrl;
-
     boolean updateThreadRunning = false;
-
 
     @PostConstruct
     public void init() {
@@ -67,20 +58,9 @@ public class ReplicationService {
     }
 
     public void actualInit() throws UnknownHostException{
-        // allows for local testing
-//        System.out.println(node.getNamingServerIp());
-//        if (node.getNamingServerIp() == null) {
-//            node.setNamingServerIp(InetAddress.getByName("127.0.0.1"));
-//        }
-
         localFileFolder = new File(node.getLOCAL_FILES_PATH());
-        // set folder path for data-files (e.g., /data/)
-        //currentLocalFiles = new ArrayList<>();
-
         replicationBaseUrl = "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/replication";
 
-        System.out.println("local path: " + localFileFolder);
-        System.out.println("replicated path: " + node.getREPLICATED_FILES_PATH());
         // verify local files and send hash-values to naming server
         startUp();
 
@@ -96,24 +76,20 @@ public class ReplicationService {
     //  - Transfer files to the owner-nodes.
     public void startUp() throws UnknownHostException {
         // get current files.
-
         currentLocalFiles = fileService.scanFolder(localFileFolder, localFileFolder.toPath());
 
-        logger.info("Found following files: " + currentLocalFiles);
-
+        logger.info("Found following local files: " + currentLocalFiles);
 
         if (currentLocalFiles.isEmpty()) {
             logger.info("Breaking replication start-up because no local files were found");
             return;
         }
-
         Map<String, String> replicationMap = requestFileLocation(currentLocalFiles);
 
         // send files to owner-node
         for (String fileName : replicationMap.keySet()) {
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
-
             sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
         }
     }
@@ -128,15 +104,14 @@ public class ReplicationService {
         // request replication locations from namingserver
         Map<String, String> replicationMap = requestFileLocation(new ArrayList<>(replicatedFiles.keySet()));
 
-
         for (String fileName : replicationMap.keySet()) {
             InetAddress newLocation = InetAddress.getByName(replicationMap.get(fileName));
             if (!newLocation.equals(node.getIpAddress())) {
                 // set transfer-endpoint
                 InetAddress targetIP = newLocation;
-                sendFile(targetIP, fileName, node.getREPLICATED_FILES_PATH(), replicatedFiles.get(fileName)); // was local file path should be replicated???
+                sendFile(targetIP, fileName, node.getREPLICATED_FILES_PATH(), replicatedFiles.get(fileName));
                 logRepository.deleteByFileName(fileName);
-                deleteFile(node.getIpAddress(),fileName); // added!!!
+                deleteFile(node.getIpAddress(),fileName);
             }
         }
     }
@@ -144,13 +119,13 @@ public class ReplicationService {
     public void updateThread() throws UnknownHostException {
         while(updateThreadRunning) {
             if (node.isNewNode()) {
-                logger.info("new node added to system, we are in replication :-)");
+                logger.info("New node added to network, start update phase of replication");
                 sendReplicatedFilesToNewNode();
                 node.setNewNode(false);
             }
             // check updates
             Map<String, Integer> updatedFiles = findUpdates();
-            logger.info("found update :" + updatedFiles.keySet());
+            logger.info("Found updates:" + updatedFiles.keySet());
 
             // report updates
             for (String fileName : updatedFiles.keySet()) {
@@ -201,12 +176,11 @@ public class ReplicationService {
      */
     public Map<String, Integer> findUpdates() {
         ArrayList<String> newFileList = fileService.scanFolder(localFileFolder, localFileFolder.toPath());
-
         Map<String, Integer> updatedFilesMap = new HashMap<>();
 
         // get current files
-        System.out.println(newFileList);
-        System.out.println(currentLocalFiles);
+        logger.info("Updated file list: "+newFileList);
+        logger.info("Current file list: "+currentLocalFiles);
 
         // added files = files in newList but not in saved list
         for (String fileName : newFileList) {
@@ -227,22 +201,18 @@ public class ReplicationService {
 
     public void sendFile(InetAddress targetIP, String fileName, String root, InetAddress downloadLocation) throws UnknownHostException {
         Gson gson = new Gson();
-
         if (targetIP.equals(node.getIpAddress())) {
             return;
         }
 
         String fileTransferUrl = "http:/" + targetIP + ":8080/replication/transfer-file";
-        System.out.println(fileTransferUrl + ": " + fileName);
+        logger.info(fileTransferUrl + ": " + fileName);
 
         // create file-byteStream
         File file = new File(root + "/" + fileName);
-        System.out.println(fileTransferUrl + ": " + file.getPath());
         byte[] fileBytes = fileService.fileToBytes(file);
 
         LogEntry log = new LogEntry(fileName, targetIP, downloadLocation);
-
-//        logRepository.save(log); //test ?????
 
         // create Filetransfer-object and serialize
         FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, log);
@@ -262,7 +232,7 @@ public class ReplicationService {
         }
 
         String fileTransferUrl = "http:/" + targetIP + ":8080/replication/remove-file";
-        System.out.println(fileTransferUrl + ": " + fileName);
+        logger.info(fileTransferUrl + ": " + fileName);
 
         // create Filetransfer-object with fileName and serialize
         FileTransfer fileTransfer = new FileTransfer();
@@ -279,7 +249,7 @@ public class ReplicationService {
         String hashedFileNamesJSON = new Gson().toJson(fileNames);
 
         // report hashedFileNames to Naming Server
-        logger.info("hashed FileNames JSON" + hashedFileNamesJSON);
+        logger.info("FileNames JSON: " + hashedFileNamesJSON);
 
         String replicationEndpoint = replicationBaseUrl + "/initial-list";
         logger.info("Endpoint for the initial list post-request: " + replicationEndpoint);
@@ -299,8 +269,6 @@ public class ReplicationService {
     public void processShuttingDown(InetAddress prevNodeIP) throws UnknownHostException {
         // process replicated files : send replicated to previous node
         sendReplicatedFilesToPrevious(prevNodeIP);
-
-        // process local files : if files were download, update location
     }
 
     public void sendReplicatedFilesToPrevious(InetAddress prevNodeIP) throws UnknownHostException {
@@ -331,19 +299,6 @@ public class ReplicationService {
             sendFile(prevNodeIP, fileName, node.getREPLICATED_FILES_PATH(), downloadLocation);
         }
 
-        /*
-        ArrayList<String> fileNames = new ArrayList<>();
-        fileNames = fileService.scanFolder(replicatedFileFolder);
-
-        //send to previous
-        int preID = node.getPreviousID();
-        String URLpre = node.getNamingServerUrl() + "/get-IP-by-hash/" + preID;
-        String IPpre = messageService.getRequest(URLpre, "get previous ip");
-        IPpre = IPpre.replace("\"", "");              // remove double quotes
-
-        for(String file : fileNames) {
-            replicationService.sendFile(InetAddress.getByName(IPpre),file);
-        }*/
     }
     public void sendFileToPrevious(FileTransfer fileTransfer) throws UnknownHostException {
         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getPreviousID();
