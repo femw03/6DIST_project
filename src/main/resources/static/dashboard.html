@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor - Dashboard</title>
+    <style>
+        /* Styles for the sidebar and tabbed content */
+        .sidebar {
+            width: 200px;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        .content {
+            margin-left: 220px;
+            padding: 20px;
+        }
+        .folder {
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        li a {
+            display: block;
+            padding: 10px;
+            text-decoration: none;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        li a:hover {
+            background-color: #ddd;
+        }
+        .active {
+            background-color: #ddd;
+        }
+
+        /* Styles for the block/windows */
+        .block {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .block-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .details {
+            margin-top: 10px;
+        }
+
+        /* Grid layout for Nodes window */
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* Adjusted for 4 columns */
+            grid-gap: 10px;
+        }
+        .node {
+            cursor: pointer; /* Making node names clickable */
+            color: blue; /* Setting the color to blue */
+        }
+    </style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+    <img src="Images/Logo.jpg" width="150" height="auto" alt="logo">
+    <ul id="tabs">
+        <li><a href="#" onclick="showTab('home')">Home</a></li>
+        <li><a href="#" onclick="showTab('nodes')">Nodes</a></li>
+        <li><a href="#" onclick="showTab('files')">Files</a></li>
+        <li><a href="#" onclick="showTab('options')">Options</a></li>
+    </ul>
+</div>
+
+<!-- Main content -->
+<div class="content">
+    <!-- Home tab -->
+    <div id="home" class="tab-content">
+        <h1>Network Monitor - Home</h1>
+
+        <!-- Naming Server block -->
+        <div class="block">
+            <div class="block-title">Naming Server</div>
+            <div>Status: Online</div>
+            <div>Number of Nodes Connected: 10</div>
+            <div>IP Address: 192.168.1.100</div>
+        </div>
+
+        <!-- Nodes block -->
+        <div class="block" id="nodesBlock">
+            <div class="block-title">Nodes</div>
+            <!-- Nodes grid will be dynamically added here -->
+            <div class="node-grid" id="nodeGrid">
+                <!-- Node grid will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Details block -->
+        <div class="block" id="detailsBlock">
+            <div class="block-title">Details</div>
+            <!-- Node details will be displayed here -->
+        </div>
+    </div>
+
+    <!-- Nodes tab -->
+    <div id="nodes" class="tab-content" style="display: none;">
+        <h1>Network Monitor - Nodes</h1>
+        <div class="node-grid" id="nodeGridNodes">
+            <!-- Node grid will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Files tab -->
+    <div id="files" class="tab-content" style="display: none;">
+        <h1>Network Monitor - Files</h1>
+        <!-- Add content for Files tab -->
+    </div>
+
+    <!-- Options tab -->
+    <div id="options" class="tab-content" style="display: none;">
+        <h1>Network Monitor - Options</h1>
+        <!-- Add content for Options tab -->
+    </div>
+</div>
+
+<script>
+    function showTab(tabName) {
+        // Hide all tab contents
+        var tabs = document.getElementsByClassName('tab-content');
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].style.display = 'none';
+        }
+
+        // Show the selected tab content
+        document.getElementById(tabName).style.display = 'block';
+
+        // Remove 'active' class from all tabs
+        var tabLinks = document.getElementById('tabs').getElementsByTagName('a');
+        for (var i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].classList.remove('active');
+        }
+
+        // Add 'active' class to the clicked tab
+        event.currentTarget.classList.add('active');
+
+        // If Home tab is clicked, populate the nodes
+        if (tabName === 'home') {
+            populateNodes();
+        }
+    }
+
+    // Sample data for nodes
+    var nodes = [
+        { name: 'Node 1', id: '123456', ip: '192.168.1.101', prevId: '654321', nextId: '789012', localFiles: 10, replicatedFiles: 5, status: 'Active' },
+        { name: 'Node 2', id: '654321', ip: '192.168.1.102', prevId: '123456', nextId: '789012', localFiles: 8, replicatedFiles: 3, status: 'Inactive' }
+    ];
+
+    // Function to populate the Nodes block
+    function populateNodes() {
+        var nodeGrid = document.getElementById('nodeGrid');
+        // Clear existing content
+        nodeGrid.innerHTML = '';
+
+        // Add grid headers
+        var headers = ['Name', 'ID', 'IP', 'Status'];
+        headers.forEach(function(header) {
+            var headerElement = document.createElement('col');
+            headerElement.textContent = header;
+            nodeGrid.appendChild(headerElement);
+        });
+        // Iterate over each node and create HTML elements
+        nodes.forEach(function(node) {
+            var row = document.createElement('div');
+            row.classList.add('node-row'); // Add a class for row
+
+            var nameElement = document.createElement('div');
+            nameElement.textContent = node.name;
+            nameElement.classList.add('node'); // Add a class for easier identification
+            row.appendChild(nameElement);
+
+            var idElement = document.createElement('div');
+            idElement.textContent = node.id;
+            row.appendChild(idElement);
+
+            var ipElement = document.createElement('div');
+            ipElement.textContent = node.ip;
+            row.appendChild(ipElement);
+
+            var statusElement = document.createElement('div');
+            statusElement.textContent = node.status;
+            row.appendChild(statusElement);
+
+            // Add click event listener to each node element
+            row.addEventListener('click', function() {
+                showNodeDetails(node);
+            });
+
+            nodeGrid.appendChild(row);
+        });
+    }
+
+    // Function to show node details in the Details tab
+    function showNodeDetails(node) {
+        var detailsBlock = document.getElementById('detailsBlock');
+        detailsBlock.innerHTML = '';
+
+        // Create detail elements
+        var detailName = document.createElement('div');
+        detailName.textContent = 'Name: ' + node.name;
+        detailsBlock.appendChild(detailName);
+
+        var detailId = document.createElement('div');
+        detailId.textContent = 'ID: ' + node.id;
+        detailsBlock.appendChild(detailId);
+
+        var detailIp = document.createElement('div');
+        detailIp.textContent = 'IP: ' + node.ip;
+        detailsBlock.appendChild(detailIp);
+
+        var detailStatus = document.createElement('div');
+        detailStatus.textContent = 'Status: ' + node.status;
+        detailsBlock.appendChild(detailStatus);
+
+        var prevIdElement = document.createElement('div');
+        prevIdElement.textContent = 'Previous ID: ' + node.prevId;
+        detailsBlock.appendChild(prevIdElement);
+
+        var nextIdElement = document.createElement('div');
+        nextIdElement.textContent = 'Next ID: ' + node.nextId;
+        detailsBlock.appendChild(nextIdElement);
+
+        var localFilesElement = document.createElement('div');
+        localFilesElement.textContent = 'Local Files: ' + node.localFiles;
+        detailsBlock.appendChild(localFilesElement);
+
+        var replicatedFilesElement = document.createElement('div');
+        replicatedFilesElement.textContent = 'Replicated Files: ' + node.replicatedFiles;
+        detailsBlock.appendChild(replicatedFilesElement);
+    }
+
+    // Initial population of nodes
+    populateNodes();
+</script>
+</body>
+</html>
+
