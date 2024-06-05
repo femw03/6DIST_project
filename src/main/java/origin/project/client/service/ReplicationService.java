@@ -50,7 +50,7 @@ public class ReplicationService {
     @PostConstruct
     public void init() {
         new Thread(() -> {
-            while (!node.isDiscoveryFinished() && node.getExistingNodes() < 2) {
+            while (!node.isDiscoveryFinished()) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
@@ -134,7 +134,7 @@ public class ReplicationService {
             if (!newLocation.equals(node.getIpAddress())) {
                 // set transfer-endpoint
                 InetAddress targetIP = newLocation;
-                sendFile(targetIP, fileName, node.getREPLICATED_FILES_PATH(), replicatedFiles.get(fileName)); // was local file path should be replicated???
+                sendFile(targetIP, fileName, node.getREPLICATED_FILES_PATH(), replicatedFiles.get(fileName));
                 logRepository.deleteByFileName(fileName);
                 deleteFile(node.getIpAddress(),fileName); // added!!!
             }
@@ -144,7 +144,7 @@ public class ReplicationService {
     public void updateThread() throws UnknownHostException {
         while(updateThreadRunning) {
             if (node.isNewNode()) {
-                logger.info("new node added to system, we are in replication :-)");
+                logger.info("New node detected in Update-thread.");
                 sendReplicatedFilesToNewNode();
                 node.setNewNode(false);
             }
@@ -226,8 +226,6 @@ public class ReplicationService {
     }
 
     public void sendFile(InetAddress targetIP, String fileName, String root, InetAddress downloadLocation) throws UnknownHostException {
-        Gson gson = new Gson();
-
         if (targetIP.equals(node.getIpAddress())) {
             return;
         }
@@ -242,9 +240,8 @@ public class ReplicationService {
 
         LogEntry log = new LogEntry(fileName, targetIP, downloadLocation);
 
-//        logRepository.save(log); //test ?????
-
         // create Filetransfer-object and serialize
+        Gson gson = new Gson();
         FileTransfer fileTransfer = new FileTransfer(fileName, fileBytes, log);
         String fileTransferJson = gson.toJson(fileTransfer);
 
@@ -254,8 +251,6 @@ public class ReplicationService {
     }
 
     public void deleteFile(InetAddress targetIP, String fileName) throws UnknownHostException {
-        Gson gson = new Gson();
-
         // don't send to yourself.
         if (targetIP == node.getIpAddress()) {
             return;
@@ -267,6 +262,7 @@ public class ReplicationService {
         // create Filetransfer-object with fileName and serialize
         FileTransfer fileTransfer = new FileTransfer();
         fileTransfer.setFileName(fileName);
+        Gson gson = new Gson();
         String fileTransferJson = gson.toJson(fileTransfer);
 
         // send request

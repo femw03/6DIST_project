@@ -50,7 +50,7 @@ public class ReplicationController {
         }
 
         if(replicationService.getCurrentLocalFiles().contains(name)){
-            System.out.println("local file received from shutdown, sending to previous : " + name);
+            System.out.println("received file is a local file, sending to previous : " + name);
             replicationService.sendFileToPrevious(fileTransfer);
             return ResponseEntity.ok("File " + fileTransfer.getFileName() + " send to previous successfully.");
         }
