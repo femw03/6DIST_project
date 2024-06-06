@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -102,7 +102,7 @@
 <body>
 <!-- Sidebar -->
 <div class="sidebar">
-  <img src="Images/Logo.jpg" width="150" height="auto" alt="logo">
+  <img src=Images/Logo1.jpg width="150" height="auto" alt="logo1">
   <ul id="tabs">
     <li><a href="#" onclick="showTab('home')">Home</a></li>
     <li><a href="#" onclick="showTab('nodes')">Nodes</a></li>
@@ -122,7 +122,7 @@
       <div class="block-title">Naming Server</div>
       <div>Status: Online</div>
       <div>Number of Active Nodes: <span id="activeNodesCount">0</span></div>
-      <div>IP Address: 192.168.1.100</div>
+      <div>IP Address: <span th:text="${namingServerIp}">Fetching...</span></div>
     </div>
 
     <!-- Nodes block -->
@@ -138,6 +138,12 @@
     <div class="block" id="detailsBlock">
       <div class="block-title">Details</div>
       <!-- Node details will be displayed here -->
+    </div>
+
+    <!-- Debug block -->
+    <div class="block" id="debugBlock">
+      <div class="block-title">Debug Information</div>
+      <div id="debugResponse">Response will be displayed here</div>
     </div>
   </div>
 
@@ -193,6 +199,7 @@
     // If Home tab is clicked, populate the nodes
     if (tabName === 'home') {
       populateNodes();
+      fetchNodeData();  //to debug!
     } else if (tabName === 'nodes') {
       populateNodesTab();
     } else if (tabName === 'files') {
@@ -200,44 +207,81 @@
     }
   }
 
-  //sample data for nodes
-  var nodes = [
-    {
-      name: 'Node 1',
-      id: '123456',
-      ip: '192.168.1.101',
-      prevId: '654321',
-      nextId: '789012',
-      status: 'Active',
-      localFiles: ['file1.txt', 'file2.txt', 'file3.txt'], // Example local files
-      replicatedFiles: ['file4.txt', 'file5.txt'], // Example replicated files
-    },
-    {
-      name: 'Node 2',
-      id: '654321',
-      ip: '192.168.1.102',
-      prevId: '123456',
-      nextId: '789012',
-      status: 'Inactive',
-      localFiles: ['file6.txt', 'file7.txt'], // Example local files
-      replicatedFiles: ['file8.txt'], // Example replicated files
-    }
-  ];
+  async function getRequest(endpoint, request) {
+    try {
+      console.log(`entered getRequest ${endpoint} ${request}`);
 
+      // When a button with the class 'btn' is clicked
+      $('.btn').click(async function () {
+        try {
+          // Make an AJAX GET request to the endpoint
+          $.get(endpoint, function (data, status) {
+            // Handle the response
+            console.log(`Response status: ${status}`);
+
+            // Display the response body for debugging
+            document.getElementById('debugResponse').textContent = `Response: ${data}`;
+
+            // Return the parsed JSON if possible
+            try {
+              const parsedData = JSON.parse(data);
+              return parsedData;
+            } catch (error) {
+              console.error('Error parsing JSON response:', error);
+              document.getElementById('debugResponse').textContent += `\nError parsing JSON: ${error}`;
+              return data;
+            }
+          });
+        } catch (error) {
+          // Handle errors in the AJAX request
+          console.error('Error in AJAX request:', error);
+          document.getElementById('debugResponse').textContent = `Error in AJAX request: ${error}`;
+        }
+      });
+
+    } catch (error) {
+      // Handle any other errors
+      console.error('Error:', error);
+      document.getElementById('debugResponse').textContent = `Error: ${error}`;
+    }
+  }
+
+  // Function to fetch node data
+  async function fetchNodeData() {
+    try {
+      const endpoint = 'http://172.18.0.3:8080/naming-server/all-nodes/get-IP-by-hash/22952';
+      const request = 'get next ip';
+      const data = await getRequest(endpoint, request);
+
+      if (!data) {
+        throw new Error('Failed to fetch nodes ' + data);
+      }
+
+      // Debug information
+      document.getElementById('debugResponse').textContent += `\nFetched data: ${JSON.stringify(data)}`;
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching node data:', error);
+      document.getElementById('debugResponse').textContent = `Error fetching node data: ${error}`;
+      return [];
+    }
+  }
 
   // Function to populate the Nodes block in the Home tab
-  function populateNodes() {
+  async function populateNodes() {
+    const nodes = await fetchNodeData(); // Fetch node data
     var nodeGrid = document.getElementById('nodeGrid');
     // Clear existing content
     nodeGrid.innerHTML = '';
 
     // Iterate over each node and create HTML elements
-    nodes.forEach(function(node) {
+    nodes.forEach(function (node) {
       var row = document.createElement('div');
       row.classList.add('node-row'); // Add a class for row
 
       var nameElement = document.createElement('div');
-      nameElement.textContent = node.name;
+      nameElement.textContent = nodes;//node.name;
       nameElement.classList.add('node'); // Add a class for easier identification
       row.appendChild(nameElement);
 
@@ -254,7 +298,7 @@
       row.appendChild(statusElement);
 
       // Add click event listener to each node element
-      row.addEventListener('click', function() {
+      row.addEventListener('click', function () {
         showNodeDetails(node);
       });
 
@@ -570,6 +614,7 @@
 
   // Initial population of nodes when the page loads
   document.addEventListener('DOMContentLoaded', function() {
+    fetchNodeData(); // Fetch nodes from the naming server
     calculateFileCounts();
     populateNodes(); // we want nodes to be ready when we see home screen!
     initializeColorTheme(); // Initialize color theme

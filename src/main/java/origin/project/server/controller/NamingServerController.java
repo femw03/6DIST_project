@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.server.model.naming.NamingEntry;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
+import org.springframework.web.bind.annotation.GetMapping;
 
 
 @Getter
@@ -217,5 +219,15 @@ public class NamingServerController {
         return namingService.hashingFunction(name);
     }
 
-
+    // gui!
+    /*@GetMapping("/GUI")
+    public String dashboard(Model model) {
+        //List<NamingEntry> nodes = (List<NamingEntry>) namingRepository.findAll();
+        //model.addAttribute("nodes", nodes);
+        //pass namingserverip!!!
+        //model.addAttribute("namingServerIp", "192.168.2.1");
+        model.addAttribute("dashboardContent", "Dashboard content goes here...");
+        logger.info("initialized GUI!");
+        return "dashboard2";
+    }*/
 }
