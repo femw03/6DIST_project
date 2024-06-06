@@ -121,7 +121,7 @@
     <div class="block">
       <div class="block-title">Naming Server</div>
       <div>Status: Online</div>
-      <div>Number of Active Nodes: <span id="activeNodesCount">0</span></div>
+      <div>Number of Active Nodes: <span th:text="${existingNodes}">0</span></div>
       <div>IP Address: <span th:text="${namingServerIp}">Fetching...</span></div>
     </div>
 
@@ -199,7 +199,9 @@
     // If Home tab is clicked, populate the nodes
     if (tabName === 'home') {
       populateNodes();
-      fetchNodeData();  //to debug!
+      //fetchNodeData();  //to debug!
+      testFetch();
+
     } else if (tabName === 'nodes') {
       populateNodesTab();
     } else if (tabName === 'files') {
@@ -207,60 +209,59 @@
     }
   }
 
-  async function getRequest(endpoint, request) {
+  async function getRequest(endpoint) {
     try {
-      console.log(`entered getRequest ${endpoint} ${request}`);
+      console.log(`Entered getRequest: ${endpoint}`);
+      //document.getElementById('debugResponse').textContent = `Entered getRequest: ${endpoint}`;
 
-      // When a button with the class 'btn' is clicked
-      $('.btn').click(async function () {
-        try {
-          // Make an AJAX GET request to the endpoint
-          $.get(endpoint, function (data, status) {
-            // Handle the response
-            console.log(`Response status: ${status}`);
+      const response = await fetch(endpoint);
 
-            // Display the response body for debugging
-            document.getElementById('debugResponse').textContent = `Response: ${data}`;
+      console.log(`Response status: ${response.status}`);
+      //document.getElementById('debugResponse').textContent = `Response status: ${response.status}`;
 
-            // Return the parsed JSON if possible
-            try {
-              const parsedData = JSON.parse(data);
-              return parsedData;
-            } catch (error) {
-              console.error('Error parsing JSON response:', error);
-              document.getElementById('debugResponse').textContent += `\nError parsing JSON: ${error}`;
-              return data;
-            }
-          });
-        } catch (error) {
-          // Handle errors in the AJAX request
-          console.error('Error in AJAX request:', error);
-          document.getElementById('debugResponse').textContent = `Error in AJAX request: ${error}`;
-        }
-      });
+      if (!response.ok) {
+        throw new Error(`Network response was not ok. Status: ${response.status}`);
+      }
 
+      const data = await response.text();
+
+      // Log the raw data for debugging
+      console.log(`Raw response data: ${data}`);
+      //document.getElementById('debugResponse').textContent += `\nRaw response data: ${data}`;
+
+      // Attempt to parse JSON data
+      try {
+        const parsedData = JSON.parse(data);
+        return parsedData;
+      } catch (error) {
+        console.error('Error parsing JSON response:', error);
+        document.getElementById('debugResponse').textContent = `\nError parsing JSON: ${error}`;
+        return data;
+      }
     } catch (error) {
-      // Handle any other errors
-      console.error('Error:', error);
-      document.getElementById('debugResponse').textContent = `Error: ${error}`;
+      console.error('Error in fetch request:', error);
+      document.getElementById('debugResponse').textContent = `Error in fetch request: ${error}`;
+      return null;
     }
   }
 
-  // Function to fetch node data
-  async function fetchNodeData() {
+  async function fetchNodeData(endpoint) {
+    var activeNodesCount;
     try {
-      const endpoint = 'http://172.18.0.3:8080/naming-server/all-nodes/get-IP-by-hash/22952';
-      const request = 'get next ip';
-      const data = await getRequest(endpoint, request);
+      console.log('Entered fetchNodeData!');
+      //document.getElementById('debugResponse').textContent = `Entered fetchNodeData!`;
+
+      //const endpoint = 'http://localhost:8080/naming-server/all-nodes';
+      const data = await getRequest(endpoint);
 
       if (!data) {
-        throw new Error('Failed to fetch nodes ' + data);
+        throw new Error('Failed to fetch nodes');
       }
 
       // Debug information
-      document.getElementById('debugResponse').textContent += `\nFetched data: ${JSON.stringify(data)}`;
-
-      return data;
+      console.log(`Fetched data: ${JSON.stringify(data)}`);
+      document.getElementById('debugResponse').textContent = `\nFetched data: ${JSON.stringify(data)}`;
+      return JSON.stringify(data);
     } catch (error) {
       console.error('Error fetching node data:', error);
       document.getElementById('debugResponse').textContent = `Error fetching node data: ${error}`;
@@ -268,9 +269,22 @@
     }
   }
 
+  /*async function testFetch() {
+    try {
+      document.getElementById('debugResponse').textContent = `Entered Test fetch`;
+      const response = await fetch('http://localhost:8080/naming-server/get-IP-by-hash/7338');
+      const data = await response.json();
+      console.log(data);
+      document.getElementById('debugResponse').textContent = `Test fetch ${data}`;
+    } catch (error) {
+      console.error('Error:', error);
+      document.getElementById('debugResponse').textContent = `Test fetch error ${error}`;
+    }
+  }*/
+
   // Function to populate the Nodes block in the Home tab
   async function populateNodes() {
-    const nodes = await fetchNodeData(); // Fetch node data
+    const nodes = await fetchNodeData('http://localhost:8080/naming-server/all-nodes'); // Fetch node data
     var nodeGrid = document.getElementById('nodeGrid');
     // Clear existing content
     nodeGrid.innerHTML = '';
@@ -615,6 +629,7 @@
   // Initial population of nodes when the page loads
   document.addEventListener('DOMContentLoaded', function() {
     fetchNodeData(); // Fetch nodes from the naming server
+    //testFetch();
     calculateFileCounts();
     populateNodes(); // we want nodes to be ready when we see home screen!
     initializeColorTheme(); // Initialize color theme

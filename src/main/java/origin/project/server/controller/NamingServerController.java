@@ -133,7 +133,6 @@ public class NamingServerController {
         return optionalEntry;
     }
 
-
     @GetMapping("/get-IP-by-hash/{hashValue}")
     public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
         logger.info("GET: /get-IP-by-hash/"+ hashValue);
@@ -218,16 +217,4 @@ public class NamingServerController {
         logger.info("GET /get-hash/" + name);
         return namingService.hashingFunction(name);
     }
-
-    // gui!
-    /*@GetMapping("/GUI")
-    public String dashboard(Model model) {
-        //List<NamingEntry> nodes = (List<NamingEntry>) namingRepository.findAll();
-        //model.addAttribute("nodes", nodes);
-        //pass namingserverip!!!
-        //model.addAttribute("namingServerIp", "192.168.2.1");
-        model.addAttribute("dashboardContent", "Dashboard content goes here...");
-        logger.info("initialized GUI!");
-        return "dashboard2";
-    }*/
 }
