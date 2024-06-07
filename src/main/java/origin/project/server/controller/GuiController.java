@@ -21,6 +21,6 @@ public class GuiController {
         model.addAttribute("namingServerIp", "173.18.0.3"); // test, need function to get namingserver IP???
         model.addAttribute("existingNodes", 5);
         // Return the view name (HTML template name)
-        return "dashboard2";
+        return "GUI";
     }
 }

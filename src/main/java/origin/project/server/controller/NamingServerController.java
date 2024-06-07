@@ -34,8 +34,8 @@ public class NamingServerController {
     private NamingService namingService;
     @Autowired
     private JsonService jsonService;
-    @Autowired
-    private MessageService messageService;
+    //@Autowired
+    //private MessageService messageService; // circular dependency!!!!
 
     @Value("${multicast.port}")
     private int multicastPort;
@@ -170,7 +170,7 @@ public class NamingServerController {
         return optionalEntry;
     }
 
-    @GetMapping("/get-node/{ip}")
+    @GetMapping("/get-node/{ip}") //doesn't seem to work?
     public boolean getNode(@PathVariable("ip") String ip) throws UnknownHostException {
         logger.info("GET: /get-node/"+ ip);
         boolean inRepository = false;
@@ -222,6 +222,7 @@ public class NamingServerController {
 
     @GetMapping("/get-IP-server")
     public String getIPServer() throws UnknownHostException {
+        logger.info("GET /get-IP-server");
         InetAddress localHost = InetAddress.getLocalHost();
         return localHost.getHostAddress();
     }
@@ -234,13 +235,13 @@ public class NamingServerController {
         Iterable<String> localFiles = messageService.getRequest(nodeUrl, "get local files");
     }*/
 
-    @GetMapping("/get-nodeName")
+    /*@GetMapping("/get-nodeName")
     public String getNodeName(@PathVariable("hash") int hashID) {
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashID);
         InetAddress ipAddress =  optionalEntry.get().getIP();
         String nodeUrl = "http:/" + ipAddress + ":" + nodePort + "/node/get-name";
         String nodeName = messageService.getRequest(nodeUrl, "get node name");
         return nodeName;
-    }
+    }*/
 
 }

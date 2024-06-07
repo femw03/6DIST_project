@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Monitor - GUI</title>
+  <style>
+    /* Styles for the sidebar and tabbed content */
+    .sidebar {
+      width: 200px;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+    .content {
+      margin-left: 220px;
+      padding: 20px;
+    }
+    .folder {
+      margin-bottom: 10px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+    li {
+      margin-bottom: 10px;
+    }
+    li a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    li a:hover {
+      background-color: #ddd;
+    }
+    .active {
+      background-color: #ddd;
+    }
+
+    /* Styles for the block/windows */
+    .block {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .block-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .details {
+      margin-top: 10px;
+    }
+
+    /* Grid layout for Nodes window */
+    .node-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr); /* Adjusted for 4 columns */
+      grid-gap: 10px;
+    }
+    .node-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+    }
+    .node-row div {
+      margin-bottom: 5px;
+    }
+    .btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .btn-activate {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-terminate {
+      background-color: #f44336;
+      color: white;
+    }
+    .node {
+      cursor: pointer; /* Making node names clickable */
+      color: blue; /* Setting the color to blue */
+    }
+  </style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+  <img src=Images/Logo1.jpg width="150" height="auto" alt="logo1">
+  <ul id="tabs">
+    <li><a href="#" onclick="showTab('home')">Home</a></li>
+    <li><a href="#" onclick="showTab('nodes')">Nodes</a></li>
+    <li><a href="#" onclick="showTab('files')">Files</a></li>
+    <li><a href="#" onclick="showTab('options')">Options</a></li>
+  </ul>
+</div>
+
+<!-- Main content -->
+<div class="content">
+  <!-- Home tab -->
+  <div id="home" class="tab-content">
+    <h1>Network Monitor - Home</h1>
+
+    <!-- Naming Server block -->
+    <div class="block">
+      <div class="block-title">Naming Server</div>
+      <div>Status: Online</div>
+      <div>Number of Active Nodes: <span id="activeNodesCount">0</span></div>
+      <div>IP Address: <span id="namingServerIp">0.0.0.0</span></div>
+    </div>
+
+    <!-- Nodes block -->
+    <div class="block" id="nodesBlock">
+      <div class="block-title">Nodes</div>
+      <!-- Nodes grid will be dynamically added here -->
+      <div class="node-grid" id="nodeGrid">
+        <!-- Node grid will be dynamically added here -->
+      </div>
+    </div>
+
+    <!-- Details block -->
+    <div class="block" id="detailsBlock">
+      <div class="block-title">Details</div>
+      <!-- Node details will be displayed here -->
+    </div>
+  </div>
+
+  <!-- Nodes tab -->
+  <div id="nodes" class="tab-content" style="display: none;">
+    <h1>Network Monitor - Nodes</h1>
+    <div class="node-grid" id="nodeGridNodes">
+      <!-- Node grid will be dynamically added here -->
+    </div>
+  </div>
+
+  <!-- Files tab -->
+  <div id="files" class="tab-content" style="display: none;">
+    <h1>Network Monitor - Files</h1>
+    <div class="files-grid" id="fileGridfiles">
+      <!-- Files grid will be dynamically added here -->
+    </div>
+  </div>
+
+  <!-- Options tab -->
+  <div id="options" class="tab-content" style="display: none;">
+    <h1>Network Monitor - Options</h1>
+    <div class="block">
+      <div class="block-title">Color Theme</div>
+      <select id="colorThemeSelect">
+        <option value="white">White</option>
+        <option value="blue">Dark Blue</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function getRequest(endpoint) {
+    try {
+      console.log(`Entered getRequest: ${endpoint}`);
+      //document.getElementById('debugResponse').textContent = `Entered getRequest: ${endpoint}`;
+
+      const response = await fetch(endpoint);
+
+      console.log(`Response status: ${response.status}`);
+      //document.getElementById('debugResponse').textContent = `Response status: ${response.status}`;
+
+      if (!response.ok) {
+        throw new Error(`Network response was not ok. Status: ${response.status}`);
+      }
+
+      const data = await response.text();
+
+      // Log the raw data for debugging
+      console.log(`Raw response data: ${data}`);
+      //document.getElementById('debugResponse').textContent += `\nRaw response data: ${data}`;
+
+      // Attempt to parse JSON data
+      if(typeof data != "string") {
+        try {
+          const parsedData = JSON.parse(data);
+          return parsedData;
+        } catch (error) {
+          console.error('Error parsing JSON response:', error);
+          document.getElementById('debugResponse').textContent = `\nError parsing JSON: ${error}`;
+          return data;
+        }
+      }
+      else{
+        return data;
+      }
+    } catch (error) {
+      console.error('Error in fetch request:', error);
+      document.getElementById('debugResponse').textContent = `Error in fetch request: ${error}`;
+      return null;
+    }
+  }
+
+  async function fetchRemoteData() {
+    try {
+      console.log('Entered fetchRemoteData!');
+      //document.getElementById('debugResponse').textContent = `Entered fetchNodeData!`;
+
+      // getting namingserver IP
+      const endpointIPserver = 'http://localhost:8080/naming-server/get-IP-server';
+      var namingServerIPElement = document.getElementById('namingServerIp');
+      var namingServerIp = await getRequest(endpointIPserver);
+      namingServerIPElement.textContent = namingServerIp;
+
+      if (!namingServerIp) {
+        throw new Error('Failed to fetch namingserver IP');
+      }
+
+      // Debug information
+      console.log(`Fetched data: ${JSON.stringify(namingServerIp)}`);
+
+      // getting active node count
+      const endpointNodeCount = "http://localhost:8080/naming-server/get-nodecount"
+      var activeNodesCountElement = document.getElementById('activeNodesCount');
+      var activeNodesCount = await getRequest(endpointNodeCount);
+      activeNodesCountElement.textContent = activeNodesCount;
+
+      if (!activeNodesCount) {
+        throw new Error('Failed to fetch active node counts');
+      }
+
+      // Debug information
+      console.log(`Fetched data: ${JSON.stringify(activeNodesCount)}`);
+
+
+      // Implements function to fill in all info about the nodes template, see below! Not sure how yet...
+      /*One node looks like this:
+      * {
+      name: 'Node 1',
+      id: '123456',
+      ip: '192.168.1.101',
+      prevId: '654321',
+      nextId: '789012',
+      status: 'Active',
+      localFiles: ['file1.txt', 'file2.txt', 'file3.txt'], // Example local files
+      replicatedFiles: ['file4.txt', 'file5.txt'], // Example replicated files
+      }
+      * */
+
+      /*const endpointNodeInfo = "http://localhost:8080/naming-server/all-nodes"
+      const IPandHashes = await getRequest(endpointNodeInfo);
+
+      if (!IPandHashes) {
+        throw new Error('Failed to fetch nodes');
+      }
+
+      // Debug information
+      console.log(`Fetched data: ${JSON.stringify(IPandHashes)}`);
+
+      return JSON.stringify(IPandHashes);*/
+
+    } catch (error) {
+      console.error('Error fetching node data:', error);
+
+      return [];
+    }
+
+    /*try {
+      console.log('Entered fetchNodeData!');
+      //document.getElementById('debugResponse').textContent = `Entered fetchNodeData!`;
+
+      const endpoint = 'http://localhost:8080/naming-server/all-nodes';
+      const data = await getRequest(endpoint);
+
+      if (!data) {
+        throw new Error('Failed to fetch nodes');
+      }
+
+      // Debug information
+      console.log(`Fetched data: ${JSON.stringify(data)}`);
+      document.getElementById('debugResponse').textContent = `\nFetched data: ${JSON.stringify(data)}`;
+      return JSON.stringify(data);
+    } catch (error) {
+      console.error('Error fetching node data:', error);
+      document.getElementById('debugResponse').textContent = `Error fetching node data: ${error}`;
+      return [];
+    }*/
+  }
+
+  function showTab(tabName) {
+    // Hide all tab contents
+    var tabs = document.getElementsByClassName('tab-content');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].style.display = 'none';
+    }
+
+    // Show the selected tab content
+    document.getElementById(tabName).style.display = 'block';
+
+    // Remove 'active' class from all tabs
+    var tabLinks = document.getElementById('tabs').getElementsByTagName('a');
+    for (var i = 0; i < tabLinks.length; i++) {
+      tabLinks[i].classList.remove('active');
+    }
+
+    // Add 'active' class to the clicked tab
+    event.currentTarget.classList.add('active');
+
+    // If Home tab is clicked, populate the nodes
+    if (tabName === 'home') {
+      populateNodes();
+      fetchRemoteData();
+    } else if (tabName === 'nodes') {
+      populateNodesTab();
+    } else if (tabName === 'files') {
+      displayFilesTab();
+    }
+  }
+
+  //sample data for nodes
+  var nodes = [
+    /*{
+      name: 'Node 1',
+      id: '123456',
+      ip: '192.168.1.101',
+      prevId: '654321',
+      nextId: '789012',
+      status: 'Active',
+      localFiles: ['file1.txt', 'file2.txt', 'file3.txt'], // Example local files
+      replicatedFiles: ['file4.txt', 'file5.txt'], // Example replicated files
+    },
+    {
+      name: 'Node 2',
+      id: '654321',
+      ip: '192.168.1.102',
+      prevId: '123456',
+      nextId: '789012',
+      status: 'Inactive',
+      localFiles: ['file6.txt', 'file7.txt'], // Example local files
+      replicatedFiles: ['file8.txt'], // Example replicated files
+    }*/
+  ];
+
+
+  // Function to populate the Nodes block in the Home tab
+  function populateNodes() {
+    var nodeGrid = document.getElementById('nodeGrid');
+    // Clear existing content
+    nodeGrid.innerHTML = '';
+
+    // Iterate over each node and create HTML elements
+    nodes.forEach(function(node) {
+      var row = document.createElement('div');
+      row.classList.add('node-row'); // Add a class for row
+
+      var nameElement = document.createElement('div');
+      nameElement.textContent = node.name;
+      nameElement.classList.add('node'); // Add a class for easier identification
+      row.appendChild(nameElement);
+
+      var idElement = document.createElement('div');
+      idElement.textContent = node.id;
+      row.appendChild(idElement);
+
+      var ipElement = document.createElement('div');
+      ipElement.textContent = node.ip;
+      row.appendChild(ipElement);
+
+      var statusElement = document.createElement('div');
+      statusElement.textContent = node.status;
+      row.appendChild(statusElement);
+
+      // Add click event listener to each node element
+      row.addEventListener('click', function() {
+        showNodeDetails(node);
+      });
+
+      nodeGrid.appendChild(row);
+    });
+  }
+
+  // Function to show node details in the Details block in the Home tab
+  function showNodeDetails(node) {
+    var detailsBlock = document.getElementById('detailsBlock');
+
+    // Clear existing node details
+    detailsBlock.querySelectorAll('.node-detail').forEach(function(nodeDetail) {
+      nodeDetail.remove();
+    });
+
+    // Create detail elements
+    var detailName = document.createElement('div');
+    detailName.textContent = 'Name: ' + node.name;
+    detailName.classList.add('node-detail');
+    detailsBlock.appendChild(detailName);
+
+    var detailId = document.createElement('div');
+    detailId.textContent = 'ID: ' + node.id;
+    detailId.classList.add('node-detail');
+    detailsBlock.appendChild(detailId);
+
+    var detailIp = document.createElement('div');
+    detailIp.textContent = 'IP: ' + node.ip;
+    detailIp.classList.add('node-detail');
+    detailsBlock.appendChild(detailIp);
+
+    var detailStatus = document.createElement('div');
+    detailStatus.textContent = 'Status: ' + node.status;
+    detailStatus.classList.add('node-detail');
+    detailsBlock.appendChild(detailStatus);
+
+    var prevIdElement = document.createElement('div');
+    prevIdElement.textContent = 'Previous ID: ' + node.prevId;
+    prevIdElement.classList.add('node-detail');
+    detailsBlock.appendChild(prevIdElement);
+
+    var nextIdElement = document.createElement('div');
+    nextIdElement.textContent = 'Next ID: ' + node.nextId;
+    nextIdElement.classList.add('node-detail');
+    detailsBlock.appendChild(nextIdElement);
+
+    var localFilesElement = document.createElement('div');
+    localFilesElement.textContent = 'Local Files count: ' + node.localFilesCount;
+    localFilesElement.classList.add('node-detail');
+    detailsBlock.appendChild(localFilesElement);
+
+    var replicatedFilesElement = document.createElement('div');
+    replicatedFilesElement.textContent = 'Replicated Files count: ' + node.replicatedFilesCount;
+    replicatedFilesElement.classList.add('node-detail');
+    detailsBlock.appendChild(replicatedFilesElement);
+  }
+
+  // Function to populate the Nodes tab
+  function populateNodesTab() {
+    var nodeGridNodes = document.getElementById('nodeGridNodes');
+    // Clear existing content
+    nodeGridNodes.innerHTML = '';
+
+    // Iterate over each node and create HTML elements
+    nodes.forEach(function(node) {
+      var row = document.createElement('div');
+      row.classList.add('node-row'); // Add a class for row
+
+      var nameElement = document.createElement('div');
+      nameElement.textContent = node.name;
+      nameElement.classList.add('node'); // Add a class for easier identification
+      // Add a class to differentiate node names in the NODE TAB
+      nameElement.classList.add('node-tab');
+      row.appendChild(nameElement);
+
+      var idElement = document.createElement('div');
+      idElement.textContent = node.id;
+      row.appendChild(idElement);
+
+      var ipElement = document.createElement('div');
+      ipElement.textContent = node.ip;
+      row.appendChild(ipElement);
+
+      var statusElement = document.createElement('div');
+      statusElement.textContent = node.status;
+      row.appendChild(statusElement);
+
+      // Add Activate button
+      var activateButton = document.createElement('button');
+      activateButton.textContent = 'Activate';
+      activateButton.classList.add('btn', 'btn-activate');
+      activateButton.onclick = function() {
+        activateNode(node.id);
+      };
+      row.appendChild(activateButton);
+
+      // Add Terminate button
+      var terminateButton = document.createElement('button');
+      terminateButton.textContent = 'Terminate';
+      terminateButton.classList.add('btn', 'btn-terminate');
+      terminateButton.onclick = function() {
+        terminateNode(node.id);
+      };
+      row.appendChild(terminateButton);
+
+      // Set the background color of each row to white
+      row.style.backgroundColor = 'white';
+
+      nodeGridNodes.appendChild(row);
+    });
+
+    // Style the node names in the NODE TAB to remove blue color
+    var nodeTabNames = document.querySelectorAll('.node-tab');
+    nodeTabNames.forEach(function(nodeName) {
+      nodeName.style.color = '#2c3e50'; // Set the color to black
+    });
+  }
+
+  // Function to display the files tab
+  function displayFilesTab() {
+    var fileGridFiles = document.getElementById('fileGridfiles');
+    // Clear existing content
+    fileGridFiles.innerHTML = '';
+
+    // Check if there are active nodes
+    var activeNodesExist = nodes.some(function(node) {
+      return node.status === 'Active';
+    });
+
+    if (!activeNodesExist) {
+      // If there are no active nodes, display a message
+      var noActiveNodesMessage = document.createElement('div');
+      noActiveNodesMessage.textContent = 'There are no active nodes in the network at this time.';
+      noActiveNodesMessage.classList.add('block'); // Add block styling
+      fileGridFiles.appendChild(noActiveNodesMessage);
+    } else {
+      // Create a box for active nodes with title
+      var activeNodesBox = document.createElement('div');
+      activeNodesBox.classList.add('block');
+      var activeNodesTitle = document.createElement('div');
+      activeNodesTitle.classList.add('block-title');
+      activeNodesTitle.textContent = 'Active Nodes';
+      activeNodesBox.appendChild(activeNodesTitle);
+
+      // Iterate over each active node
+      nodes.forEach(function(node) {
+        if (node.status === 'Active') {
+          // Create clickable element for the node's name
+          var nodeNameElement = document.createElement('div');
+          nodeNameElement.textContent = node.name;
+          nodeNameElement.classList.add('node'); // Add a class for easier identification
+          nodeNameElement.style.cursor = 'pointer'; // Make the name clickable
+          nodeNameElement.addEventListener('click', function() {
+            // Clear existing content
+            var localFilesBox = document.getElementById('localFilesBox');
+            var replicatedFilesBox = document.getElementById('replicatedFilesBox');
+            if (localFilesBox) localFilesBox.remove();
+            if (replicatedFilesBox) replicatedFilesBox.remove();
+
+            // Create a box for local files with title
+            var localFilesBox = document.createElement('div');
+            localFilesBox.classList.add('block');
+            localFilesBox.id = 'localFilesBox';
+            var localFilesTitle = document.createElement('div');
+            localFilesTitle.classList.add('block-title');
+            localFilesTitle.textContent = 'Local Files ' + node.name;
+            localFilesBox.appendChild(localFilesTitle);
+            // Display local files
+            if (node.localFiles) {
+              node.localFiles.forEach(function(file) {
+                var fileElement = document.createElement('div');
+                fileElement.textContent = file;
+                localFilesBox.appendChild(fileElement);
+              });
+            }
+            fileGridFiles.appendChild(localFilesBox);
+
+            // Create a box for replicated files with title
+            var replicatedFilesBox = document.createElement('div');
+            replicatedFilesBox.classList.add('block');
+            replicatedFilesBox.id = 'replicatedFilesBox';
+            var replicatedFilesTitle = document.createElement('div');
+            replicatedFilesTitle.classList.add('block-title');
+            replicatedFilesTitle.textContent = 'Replicated Files ' + node.name;
+            replicatedFilesBox.appendChild(replicatedFilesTitle);
+            // Display replicated files
+            if (node.replicatedFiles) {
+              node.replicatedFiles.forEach(function(file) {
+                var fileElement = document.createElement('div');
+                fileElement.textContent = file;
+                replicatedFilesBox.appendChild(fileElement);
+              });
+            }
+            fileGridFiles.appendChild(replicatedFilesBox);
+          });
+
+          // Append the node's name element to the active nodes box
+          activeNodesBox.appendChild(nodeNameElement);
+        }
+      });
+
+      // Append the active nodes box to the file grid
+      fileGridFiles.appendChild(activeNodesBox);
+    }
+  }
+
+  // Function to handle color theme selection
+  function handleColorThemeChange() {
+    var colorThemeSelect = document.getElementById('colorThemeSelect');
+    var selectedTheme = colorThemeSelect.value;
+
+    if (selectedTheme === 'blue') {
+      document.body.style.backgroundColor = '#2c3e50'; // Dark blue background
+      document.body.style.color = '#2c3e50'; // White text color
+      var tabTitles = document.querySelectorAll('h1'); // Select all tab titles
+      tabTitles.forEach(function(title) {
+        title.style.color = 'white'; // Set title color to white
+      });
+      var whiteColumns = document.querySelectorAll('.white-column');
+      whiteColumns.forEach(function(column) {
+        column.style.color = '#2c3e50'; // Set text color to black for white columns
+      });
+    } else if (selectedTheme === 'white') {
+      document.body.style.backgroundColor = 'white'; // White background
+      document.body.style.color = '#2c3e50'; // Blue text color
+      var tabTitles = document.querySelectorAll('h1'); // Select all tab titles
+      tabTitles.forEach(function(title) {
+        title.style.color = '#2c3e50'; // Set title color to white
+      });
+      var blueColumns = document.querySelectorAll('.blue-column');
+      blueColumns.forEach(function(column) {
+        column.style.color = '#2c3e50'; // Set text color to blue for blue columns
+      });
+    }
+  }
+
+  // Add event listener for color theme change
+  document.getElementById('colorThemeSelect').addEventListener('change', handleColorThemeChange);
+
+  // Function to handle initial color theme selection
+  function initializeColorTheme() {
+    // By default, set to White theme
+    var colorThemeSelect = document.getElementById('colorThemeSelect');
+    colorThemeSelect.value = 'white'; // Set dropdown value
+    handleColorThemeChange(); // Apply selected theme
+  }
+
+  // Function to update the number of active nodes in the Naming Server block
+  function updateActiveNodesCount() {
+    var activeNodesCountElement = document.getElementById('activeNodesCount');
+    var activeNodesCount = nodes.reduce(function(acc, node) {
+      return node.status === 'Active' ? acc + 1 : acc;
+    }, 0);
+    activeNodesCountElement.textContent = activeNodesCount;
+  }
+
+  // Update the number of active nodes when the page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    updateActiveNodesCount();
+  });
+
+  // Function to activate a node
+  function activateNode(nodeId) {
+    var node = findNodeById(nodeId); // Find the node object by ID
+    if (node) {
+      if (node.status !== 'Active') {
+        node.status = 'Active'; // Set the node status to Active
+        populateNodes(); // Update the GUI
+        populateNodesTab();
+        showNodeDetails(node);
+        updateActiveNodesCount();
+      }
+    }
+  }
+
+  // Function to terminate a node
+  function terminateNode(nodeId) {
+    var node = findNodeById(nodeId); // Find the node object by ID
+    if (node) {
+      if (node.status !== 'Inactive') {
+        node.status = 'Inactive'; // Set the node status to Inactive
+        populateNodes(); // Update the GUI
+        populateNodesTab();
+        showNodeDetails(node);
+        updateActiveNodesCount();
+      }
+    }
+  }
+
+  // Function to calculate the number of local and replicated files for each node
+  function calculateFileCounts() {
+    nodes.forEach(function(node) {
+      // Calculate local file count
+      var localFileCount = node.localFiles ? node.localFiles.length : 0;
+      // Calculate replicated file count
+      var replicatedFileCount = node.replicatedFiles ? node.replicatedFiles.length : 0;
+      // Add file counts to the node object
+      node.localFilesCount = localFileCount;
+      node.replicatedFilesCount = replicatedFileCount;
+    });
+  }
+
+  // Function to find a node by ID
+  function findNodeById(nodeId) {
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === nodeId) {
+        return nodes[i];
+      }
+    }
+    return null; // Node not found
+  }
+
+  // Initial population of nodes when the page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    fetchRemoteData();
+    calculateFileCounts();
+    populateNodes(); // we want nodes to be ready when we see home screen!
+    initializeColorTheme(); // Initialize color theme
+    showTab('home'); // Default to the Home tab
+  });
+</script>
+</body>
+</html>
