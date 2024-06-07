@@ -44,7 +44,6 @@ public class ReplicationController {
             InetAddress ownerIP = namingService.findOwner(hash);
             logger.info("filename: " + fileName + " gave hash " + hash + " and returned owner " + ownerIP);
             replicationMap.put(fileName, ownerIP);
-
         }
 
         return new ResponseEntity<>(replicationMap, HttpStatus.OK);

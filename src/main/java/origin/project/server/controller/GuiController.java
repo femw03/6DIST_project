@@ -13,14 +13,6 @@ import java.util.logging.Logger;
 
 @Controller
 public class GuiController {
-    Logger logger = Logger.getLogger(MessageService.class.getName());
-
-    @Autowired
-    private NamingServerController namingServerController;
-
-    @Autowired
-    private NamingRepository namingRepository;
-
     @GetMapping("/")
     public String dashboard(Model model) {
         // Add necessary data to the model

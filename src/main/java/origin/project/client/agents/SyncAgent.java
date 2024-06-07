@@ -1,4 +1,4 @@
-/*package origin.project.client.agents;
+package origin.project.client.agents;
 
 
 import jade.core.AID;
@@ -18,7 +18,6 @@ import java.util.List;
 public class SyncAgent extends Agent {
     @Autowired
     private Node node;
-
     private List<String> fileList;
     private String nextNodeAgent;
 
@@ -98,7 +97,4 @@ public class SyncAgent extends Agent {
         // Clean up resources if needed
     }
 
-
-
 }
-*/

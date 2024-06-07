@@ -7,11 +7,10 @@ import origin.project.server.controller.NamingServerController;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.io.InputStreamReader;
+import java.net.*;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -103,5 +102,37 @@ public class MessageService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public String getRequest(String endpoint, String request) {
+        try {
+            URL url = new URL(endpoint);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            // If the request successful (status code 200), we can read response.
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                // Reader reads the response from the input stream.
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                // Builder is used to build the full response from the lines we read with the reader.
+                StringBuilder response = new StringBuilder();
+                // building the full response, including status messages, headers, ...
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                //
+                return response.toString();
+            } else {
+                // If the request was not successful, handle the error accordingly
+                System.out.println(request + "failed" + connection.getResponseCode());
+            }
+            connection.disconnect();
+        } catch (IOException e) {
+            // Handling network-related errors
+            e.printStackTrace();
+        }
+        return null;
     }
 }

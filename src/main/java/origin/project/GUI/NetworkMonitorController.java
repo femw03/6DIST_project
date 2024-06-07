@@ -9,8 +9,6 @@ import java.util.logging.Logger;
 
 @Controller
 public class NetworkMonitorController {
-    Logger logger = Logger.getLogger(MessageService.class.getName());
-
     @GetMapping("/")
     public String dashboard(Model model) {
         // Add necessary data to the model
