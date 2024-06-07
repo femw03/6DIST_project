@@ -84,6 +84,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.gitlab.jade-project</groupId>
             <artifactId>jade</artifactId>
             <version>master-m4.5.3-g165fec3-1</version>
@@ -133,6 +138,23 @@
                 </plugins>
             </build>
         </profile>
+
+        <profile>
+            <id>ProjectYApp</id>
+            <build>
+                <finalName>ProjectYApp</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>origin.project.GUI.NetworkMonitorApp</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
     </profiles>
 
 </project>
