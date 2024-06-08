@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import origin.project.client.agents.FailureAgent;
 import origin.project.client.agents.SyncAgent;
 import origin.project.client.model.dto.LogEntry;
 
@@ -60,18 +61,21 @@ public class Node {
 
     Logger logger = Logger.getLogger(Node.class.getName());
 
+    private AgentContainer mainContainer;
+
     @PostConstruct
     public void init() throws StaleProxyException {
         // create the main-container.
         // This is the central container responsible for managing agents and other containers.
         Runtime rt = Runtime.instance();
         Profile profile = new ProfileImpl();
-        AgentContainer mainContainer = rt.createMainContainer(profile);
+        mainContainer = rt.createMainContainer(profile);
         // create a SyncAgent in the container.
-        AgentController controller = mainContainer.createNewAgent(nodeName, SyncAgent.class.getName(), new Object[] {this});
+        AgentController controller = mainContainer.createNewAgent(nodeName + "sync agent", SyncAgent.class.getName(), new Object[] {this});
         // start the SyncAgent.
         controller.start();
     }
+
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);
     }

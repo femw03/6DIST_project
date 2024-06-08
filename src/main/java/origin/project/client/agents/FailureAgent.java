@@ -62,3 +62,44 @@ public class FailureAgent extends Agent {
         }
     }
 }*/
+package origin.project.client.agents;
+
+import jade.core.Agent;
+import jade.core.behaviours.*;
+import origin.project.client.Node;
+
+import java.util.logging.Logger;
+
+public class FailureAgent extends Agent {
+
+    private Logger logger = Logger.getLogger(FailureAgent.class.getName());
+
+    private String IPFailingNode;
+    @Override
+    protected void setup() {
+        // Construction of the agent
+        super.setup();
+        logger.info("Setup failure agent");
+        Object[] args = getArguments();
+        if(args!=null){
+            IPFailingNode = (String) args[0];
+            if (IPFailingNode == null) {
+                logger.info("IP of the failing node is null");
+            }
+        }else{
+            System.err.println("Error during parameter transfer");
+            System.exit(0);
+        }
+        logger.info("Finished setup failure agent with failing node IP: " + IPFailingNode);
+    }
+
+    @Override
+    protected void takeDown() {
+        // Deconstruction of the agent
+
+    }
+
+
+
+
+}

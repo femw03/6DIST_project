@@ -1,8 +1,12 @@
 package origin.project.client.service;
 
+import jade.wrapper.AgentController;
+import jade.wrapper.StaleProxyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.agents.FailureAgent;
+import origin.project.client.agents.SyncAgent;
 
 import java.net.UnknownHostException;
 import java.util.Objects;
@@ -17,6 +21,13 @@ public class FailureService {
     Logger logger = Logger.getLogger(FailureService.class.getName());
 
     public void Failure(String IPaddress) throws UnknownHostException, InterruptedException {
+        try {
+            startFailureAgent(IPaddress);
+        } catch (StaleProxyException e) {
+            e.printStackTrace();
+        }
+
+
         int nextID = node.getNextID();
         int previousID = node.getPreviousID();
         logger.info("Existing nodes: "+node.getExistingNodes());
@@ -69,8 +80,14 @@ public class FailureService {
         } else {
             logger.info("Node "+IPaddress+" already removed");
         }
+    }
 
 
+    private void startFailureAgent(String IPadress) throws StaleProxyException {
+        // create a FailureAgent in the container.
+        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPadress});
+        // start the FailureAgent.
+        controller.start();
     }
 
 }
