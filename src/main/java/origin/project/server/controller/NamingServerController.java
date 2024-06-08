@@ -34,8 +34,6 @@ public class NamingServerController {
     private NamingService namingService;
     @Autowired
     private JsonService jsonService;
-    //@Autowired
-    //private MessageService messageService; // circular dependency!!!!
 
     @Value("${multicast.port}")
     private int multicastPort;
@@ -226,22 +224,5 @@ public class NamingServerController {
         InetAddress localHost = InetAddress.getLocalHost();
         return localHost.getHostAddress();
     }
-
-    /*@GetMapping("/get-nodeLocalFiles/{hash}")
-    public Iterable<String> getNodeLocalFiles(@PathVariable("hash") int hashID) {
-        Optional<NamingEntry> optionalEntry = namingRepository.findById(hashID);
-        InetAddress ipAddress =  optionalEntry.get().getIP();
-        String nodeUrl = "http:/" + ipAddress + ":" + nodePort + "/node/get-localfiles";
-        Iterable<String> localFiles = messageService.getRequest(nodeUrl, "get local files");
-    }*/
-
-    /*@GetMapping("/get-nodeName")
-    public String getNodeName(@PathVariable("hash") int hashID) {
-        Optional<NamingEntry> optionalEntry = namingRepository.findById(hashID);
-        InetAddress ipAddress =  optionalEntry.get().getIP();
-        String nodeUrl = "http:/" + ipAddress + ":" + nodePort + "/node/get-name";
-        String nodeName = messageService.getRequest(nodeUrl, "get node name");
-        return nodeName;
-    }*/
 
 }

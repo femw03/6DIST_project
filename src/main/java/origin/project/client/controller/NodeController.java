@@ -37,4 +37,21 @@ public class NodeController {
         return localFiles;
     }
 
+    @GetMapping("/get-replicatedfiles")
+    public Iterable<String> getReplicatedFiles() {
+        File replicatedFileFolder = new File(node.getREPLICATED_FILES_PATH());
+        List<String> replicatedFiles = fileService.scanFolder(replicatedFileFolder, replicatedFileFolder.toPath());
+        return replicatedFiles;
+    }
+
+    @GetMapping("/get-nextID")
+    public int getNextID() {
+        return node.getNextID();
+    }
+
+    @GetMapping("/get-previousID")
+    public int getPreviousID() {
+        return node.getPreviousID();
+    }
+
 }
