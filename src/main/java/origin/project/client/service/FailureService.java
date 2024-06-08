@@ -21,13 +21,6 @@ public class FailureService {
     Logger logger = Logger.getLogger(FailureService.class.getName());
 
     public void Failure(String IPaddress) throws UnknownHostException, InterruptedException {
-        try {
-            startFailureAgent(IPaddress);
-        } catch (StaleProxyException e) {
-            e.printStackTrace();
-        }
-
-
         int nextID = node.getNextID();
         int previousID = node.getPreviousID();
         logger.info("Existing nodes: "+node.getExistingNodes());
@@ -80,12 +73,19 @@ public class FailureService {
         } else {
             logger.info("Node "+IPaddress+" already removed");
         }
+
+        // Start the FailureAgent
+        try {
+            startFailureAgent(IPaddress);
+        } catch (StaleProxyException e) {
+            e.printStackTrace();
+        }
     }
 
 
     private void startFailureAgent(String IPadress) throws StaleProxyException {
         // create a FailureAgent in the container.
-        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPadress});
+        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPadress, node.getCurrentID(), node});
         // start the FailureAgent.
         controller.start();
     }

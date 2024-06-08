@@ -73,8 +73,11 @@ import java.util.logging.Logger;
 public class FailureAgent extends Agent {
 
     private Logger logger = Logger.getLogger(FailureAgent.class.getName());
-
+    private Node node;
     private String IPFailingNode;
+    // We need to know where the FailureAgent started, so we can terminate it once it has looped over all the nodes
+    private int IDStartingNode;
+
     @Override
     protected void setup() {
         // Construction of the agent
@@ -83,23 +86,47 @@ public class FailureAgent extends Agent {
         Object[] args = getArguments();
         if(args!=null){
             IPFailingNode = (String) args[0];
+            IDStartingNode = (Integer) args[1];
+            node = (Node) args[2];
             if (IPFailingNode == null) {
                 logger.info("IP of the failing node is null");
+            }
+            if (node == null) {
+                logger.info("node is null");
             }
         }else{
             System.err.println("Error during parameter transfer");
             System.exit(0);
         }
-        logger.info("Finished setup failure agent with failing node IP: " + IPFailingNode);
+        logger.info("Finished setup failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
+
+        addBehaviour(new ResolveFilesOwnedByFailingNode(this));
+    }
+
+
+    private class ResolveFilesOwnedByFailingNode extends OneShotBehaviour {
+
+        public ResolveFilesOwnedByFailingNode(final Agent agent) {
+            super(agent);
+        }
+        @Override
+        public void action() {
+            // Scan the file log for any files that the failed node had and update them
+
+
+
+            doDelete();
+        }
     }
 
     @Override
     protected void takeDown() {
         // Deconstruction of the agent
-
+        if (node.getNextID() != IDStartingNode && node.getExistingNodes() > 1) {
+            logger.info("Sending failure agent to next node");
+        } else {
+            logger.info("Only 1 node in the network or failure agent reached the end of the loop." );
+            logger.info("Shutting down failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
+        }
     }
-
-
-
-
 }
