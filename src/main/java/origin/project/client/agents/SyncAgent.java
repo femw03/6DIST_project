@@ -1,3 +1,75 @@
+package origin.project.client.agents;
+
+import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.TickerBehaviour;
+import origin.project.client.Node;
+
+import java.util.logging.Logger;
+
+public class SyncAgent extends Agent {
+    Node node;
+
+    Logger logger = Logger.getLogger(SyncAgent.class.getName());
+
+    protected void setup() {
+        super.setup();
+        logger.info("Setup");
+        Object[] args = getArguments();
+        if(args!=null){
+            node = (Node) args[0];
+            if (node == null) {
+                logger.info("Node is null");
+            }
+        }else{
+            System.err.println("Error during parameter transfer");
+            System.exit(0);
+        }
+        logger.info("Setting args successful for Sync Agent Node " + node.getNodeName());
+
+
+        // add TickerBehavior that schedules the behavior to check the files.
+        addBehaviour(new RequestFileMapBehavior(this, 6000));
+    }
+
+    // agent clean-up operations
+    protected void takeDown () {
+
+    }
+
+    /**
+     * Behavior to ask the agent of the next node their file list.
+     * TickerBehavior to repeat request after a given period.
+     */
+    private class RequestFileMapBehavior extends TickerBehaviour {
+        public RequestFileMapBehavior(final Agent agent, long periodMilliSec) {
+            super(agent, periodMilliSec);
+            logger.info("Constructor RequestFileMapBehavior");
+        }
+        @Override
+        protected void onTick() {
+            // if another node is present in the network
+            System.out.println(node.getExistingNodes());
+        }
+    }
+
+    private class ReceiveFileMap extends CyclicBehaviour {
+        public ReceiveFileMap(final Agent agent) {
+            super(agent);
+        }
+
+        @Override
+        public void action() {
+
+        }
+    }
+
+}
+
+
+
+
+
 /*package origin.project.client.agents;
 
 

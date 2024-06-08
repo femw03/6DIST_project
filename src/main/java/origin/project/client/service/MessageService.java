@@ -86,7 +86,7 @@ public class MessageService {
         if (parts[0].equals("newNode")) {
             // Process multicast message
             logger.info("Received multicast");
-            node.setNewNode(true);
+            //node.setNewNode(true);
             processMulticastMessage(message, senderIPAddress);
         } else if (parts[0].equals("Discover next") || parts[0].equals("Discover previous")) {
             // Process discovery message only if necessary
@@ -279,6 +279,7 @@ public class MessageService {
         // Enable ping
         Thread.sleep(2000);         // wait until IDs are updated
         node.setPingEnable(true);
+        node.setNewNode(true); // test!!!
     }
 
     private void processDiscoveryMessage(String multicastMessage, InetAddress senderIPAddress) throws IOException, InterruptedException {
