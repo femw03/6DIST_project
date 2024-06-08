@@ -231,7 +231,7 @@
       console.log(`Fetched data: ${JSON.stringify(namingServerIp)}`);
 
       // getting active node count
-      const endpointNodeCount = "http://localhost:8080/naming-server/get-nodecount"
+      const endpointNodeCount = 'http://localhost:8080/naming-server/get-nodecount';
       var activeNodesCountElement = document.getElementById('activeNodesCount');
       var activeNodesCount = await getRequest(endpointNodeCount);
       activeNodesCountElement.textContent = activeNodesCount;
@@ -258,44 +258,98 @@
       }
       * */
 
-      /*const endpointNodeInfo = "http://localhost:8080/naming-server/all-nodes"
-      const IPandHashes = await getRequest(endpointNodeInfo);
+      // getting node info
+      const endpointAllNodeInfo = 'http://localhost:8080/naming-server/all-nodes';
+      const nodeInfo = await getRequest(endpointAllNodeInfo);
+      var nodeInfoStr = JSON.parse(nodeInfo); // turn string back to an object!
 
-      if (!IPandHashes) {
-        throw new Error('Failed to fetch nodes');
+      if (!nodeInfo) {
+        throw new Error('Failed to fetch node info');
       }
 
-      // Debug information
-      console.log(`Fetched data: ${JSON.stringify(IPandHashes)}`);
+      console.log(`Fetched node info: ${nodeInfo}`); // test kwam van stringify...
 
-      return JSON.stringify(IPandHashes);*/
+      /*
+      * Fetched node info: "[{"hash":8786,"ip":"172.18.0.6"}]"
+      * */
 
+      nodes = [];  // Clear the nodes array
+
+      for (const node of nodeInfoStr) {
+        const { hash, ip } = node;
+
+        if (hash === undefined || ip === undefined) {
+          console.error(`Invalid node data: ${node}`);
+          continue;  // Skip this node if hash or ip is undefined
+        }
+
+        const nodeDetails = {};
+
+        // Fetch node name
+        try {
+          const endpointNodeName = `http://localhost:8080/gui/get-nodeName/${hash}`;
+          var name = await getRequest(endpointNodeName);
+          if(name !== ""){
+            nodeDetails.name = name;
+          }
+          else{
+            nodeDetails.name = "Unknown";
+          }
+        } catch (error) {
+          console.error(`Failed to fetch node name for hash ${hash}: ${error}`);
+          nodeDetails.name = "Unknown";
+        }
+
+        nodeDetails.id = hash;
+        nodeDetails.ip = ip;
+
+        // Fetch previous node ID
+        try {
+          const endpointNodePrevId = `http://localhost:8080/gui/get-nodePreviousID/${hash}`;
+          nodeDetails.prevId = await getRequest(endpointNodePrevId);
+        } catch (error) {
+          console.error(`Failed to fetch previous node ID for hash ${hash}: ${error}`);
+          nodeDetails.prevId = null;
+        }
+
+        // Fetch next node ID
+        try {
+          const endpointNodeNextId = `http://localhost:8080/gui/get-nodeNextID/${hash}`;
+          nodeDetails.nextId = await getRequest(endpointNodeNextId);
+        } catch (error) {
+          console.error(`Failed to fetch next node ID for hash ${hash}: ${error}`);
+          nodeDetails.nextId = null;
+        }
+
+        // Fetch local files
+        try {
+          const endpointNodeLocalFiles = `http://localhost:8080/gui/get-nodeLocalFiles/${hash}`;
+          nodeDetails.localFiles = await getRequest(endpointNodeLocalFiles);
+        } catch (error) {
+          console.error(`Failed to fetch local files for hash ${hash}: ${error}`);
+          nodeDetails.localFiles = [];
+        }
+
+        // Fetch replicated files
+        try {
+          const endpointNodeReplicatedFiles = `http://localhost:8080/gui/get-nodeReplicatedFiles/${hash}`;
+          nodeDetails.replicatedFiles = await getRequest(endpointNodeReplicatedFiles);
+        } catch (error) {
+          console.error(`Failed to fetch replicated files for hash ${hash}: ${error}`);
+          nodeDetails.replicatedFiles = [];
+        }
+
+        nodeDetails.status = "Active"; // Assuming all nodes are active
+
+        nodes.push(nodeDetails);
+      }
+
+      console.log(`Compiled node details: ${JSON.stringify(nodes)}`);
     } catch (error) {
       console.error('Error fetching node data:', error);
 
-      return [];
+      //return [];
     }
-
-    /*try {
-      console.log('Entered fetchNodeData!');
-      //document.getElementById('debugResponse').textContent = `Entered fetchNodeData!`;
-
-      const endpoint = 'http://localhost:8080/naming-server/all-nodes';
-      const data = await getRequest(endpoint);
-
-      if (!data) {
-        throw new Error('Failed to fetch nodes');
-      }
-
-      // Debug information
-      console.log(`Fetched data: ${JSON.stringify(data)}`);
-      document.getElementById('debugResponse').textContent = `\nFetched data: ${JSON.stringify(data)}`;
-      return JSON.stringify(data);
-    } catch (error) {
-      console.error('Error fetching node data:', error);
-      document.getElementById('debugResponse').textContent = `Error fetching node data: ${error}`;
-      return [];
-    }*/
   }
 
   function showTab(tabName) {

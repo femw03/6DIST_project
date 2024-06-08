@@ -123,6 +123,7 @@ public class MessageService {
                 }
                 reader.close();
                 //
+                logger.info("in message service get request: " + response + " " + response.toString() + " " + request);
                 return response.toString();
             } else {
                 // If the request was not successful, handle the error accordingly
