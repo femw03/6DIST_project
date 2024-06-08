@@ -85,9 +85,8 @@ public class FailureService {
 
     private void startFailureAgent(String IPadress) throws StaleProxyException {
         // create a FailureAgent in the container.
-        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPadress, node.getCurrentID(), node});
+        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPadress, node.getCurrentID(), node, messageService});
         // start the FailureAgent.
         controller.start();
     }
-
 }
