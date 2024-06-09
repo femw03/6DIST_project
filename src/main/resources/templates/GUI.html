@@ -158,6 +158,8 @@
         <input type="text" id="ipAddress" name="ipAddress">
         <br>
         <button type="button" class="btn btn-activate" onclick="validateAndActivate()">Activate</button>
+        <br>
+        <span id="activationError" style="color: red;"></span>
       </form>
     </div>
   </div>
@@ -225,6 +227,54 @@
     }
   }
 
+  async function postRequest(endpoint, data) {
+    try {
+      console.log(`Entered postRequest: ${endpoint}`);
+      //document.getElementById('debugResponse').textContent = `Entered postRequest: ${endpoint}`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      console.log(`Response status: ${response.status}`);
+      //document.getElementById('debugResponse').textContent = `Response status: ${response.status}`;
+
+      if (!response.ok) {
+        throw new Error(`Network response was not ok. Status: ${response.status}`);
+      }
+
+      const responseData = await response.text();
+
+      // Log the raw data for debugging
+      console.log(`Raw response data: ${responseData}`);
+      //document.getElementById('debugResponse').textContent += `\nRaw response data: ${responseData}`;
+
+      // Attempt to parse JSON data
+      if (responseData.trim() !== "") {
+        try {
+          const parsedData = JSON.parse(responseData);
+          return parsedData;
+        } catch (error) {
+          console.error('Error parsing JSON response:', error);
+          document.getElementById('debugResponse').textContent = `\nError parsing JSON: ${error}`;
+          return responseData;
+        }
+      } else {
+        return responseData;
+      }
+    } catch (error) {
+      console.error('Error in fetch request:', error);
+      document.getElementById('debugResponse').textContent = `Error in fetch request: ${error}`;
+      return null;
+    }
+  }
+
+  let nodeDetails = {};
+
   async function fetchRemoteData() {
     try {
       console.log('Entered fetchRemoteData!');
@@ -280,32 +330,27 @@
         throw new Error('Failed to fetch node info');
       }
 
-      console.log(`Fetched node info: ${nodeInfo}`); // test kwam van stringify...
-
-      /*
-      * Fetched node info: "[{"hash":8786,"ip":"172.18.0.6"}]"
-      * */
+      console.log(`Fetched node info: ${nodeInfo}`);
 
       nodes = [];  // Clear the nodes array
 
       for (const node of nodeInfoStr) {
-        const { hash, ip } = node;
+        const {hash, ip} = node;
 
         if (hash === undefined || ip === undefined) {
           console.error(`Invalid node data: ${node}`);
           continue;  // Skip this node if hash or ip is undefined
         }
 
-        const nodeDetails = {};
+        nodeDetails = {};
 
         // Fetch node name
         try {
           const endpointNodeName = `http://localhost:8080/gui/get-nodeName/${hash}`;
           var name = await getRequest(endpointNodeName);
-          if(name !== ""){
+          if (name !== "") {
             nodeDetails.name = name;
-          }
-          else{
+          } else {
             nodeDetails.name = "Unknown";
           }
         } catch (error) {
@@ -316,47 +361,49 @@
         nodeDetails.id = hash;
         nodeDetails.ip = ip;
 
-        // Fetch previous node ID
-        try {
-          const endpointNodePrevId = `http://localhost:8080/gui/get-nodePreviousID/${hash}`;
-          nodeDetails.prevId = await getRequest(endpointNodePrevId);
-        } catch (error) {
-          console.error(`Failed to fetch previous node ID for hash ${hash}: ${error}`);
-          nodeDetails.prevId = null;
+        if (nodeDetails.name !== "unknown") {
+          // Fetch previous node ID
+          try {
+            const endpointNodePrevId = `http://localhost:8080/gui/get-nodePreviousID/${hash}`;
+            nodeDetails.prevId = await getRequest(endpointNodePrevId);
+          } catch (error) {
+            console.error(`Failed to fetch previous node ID for hash ${hash}: ${error}`);
+            nodeDetails.prevId = null;
+          }
+
+          // Fetch next node ID
+          try {
+            const endpointNodeNextId = `http://localhost:8080/gui/get-nodeNextID/${hash}`;
+            nodeDetails.nextId = await getRequest(endpointNodeNextId);
+          } catch (error) {
+            console.error(`Failed to fetch next node ID for hash ${hash}: ${error}`);
+            nodeDetails.nextId = null;
+          }
+
+          // Fetch local files
+          try {
+            const endpointNodeLocalFiles = `http://localhost:8080/gui/get-nodeLocalFiles/${hash}`;
+            var localFiles = await getRequest(endpointNodeLocalFiles);
+            nodeDetails.localFiles = JSON.parse(localFiles);
+          } catch (error) {
+            console.error(`Failed to fetch local files for hash ${hash}: ${error}`);
+            nodeDetails.localFiles = [];
+          }
+
+          // Fetch replicated files
+          try {
+            const endpointNodeReplicatedFiles = `http://localhost:8080/gui/get-nodeReplicatedFiles/${hash}`;
+            var replicatedFiles = await getRequest(endpointNodeReplicatedFiles);
+            nodeDetails.replicatedFiles = JSON.parse(replicatedFiles);
+          } catch (error) {
+            console.error(`Failed to fetch replicated files for hash ${hash}: ${error}`);
+            nodeDetails.replicatedFiles = [];
+          }
+
+          nodeDetails.status = "Active"; // Assuming all nodes are active
+
+          nodes.push(nodeDetails);
         }
-
-        // Fetch next node ID
-        try {
-          const endpointNodeNextId = `http://localhost:8080/gui/get-nodeNextID/${hash}`;
-          nodeDetails.nextId = await getRequest(endpointNodeNextId);
-        } catch (error) {
-          console.error(`Failed to fetch next node ID for hash ${hash}: ${error}`);
-          nodeDetails.nextId = null;
-        }
-
-        // Fetch local files
-        try {
-          const endpointNodeLocalFiles = `http://localhost:8080/gui/get-nodeLocalFiles/${hash}`;
-          var localFiles = await getRequest(endpointNodeLocalFiles);
-          nodeDetails.localFiles = JSON.parse(localFiles);
-        } catch (error) {
-          console.error(`Failed to fetch local files for hash ${hash}: ${error}`);
-          nodeDetails.localFiles = [];
-        }
-
-        // Fetch replicated files
-        try {
-          const endpointNodeReplicatedFiles = `http://localhost:8080/gui/get-nodeReplicatedFiles/${hash}`;
-          var replicatedFiles = await getRequest(endpointNodeReplicatedFiles);
-          nodeDetails.replicatedFiles = JSON.parse(replicatedFiles);
-        } catch (error) {
-          console.error(`Failed to fetch replicated files for hash ${hash}: ${error}`);
-          nodeDetails.replicatedFiles = [];
-        }
-
-        nodeDetails.status = "Active"; // Assuming all nodes are active
-
-        nodes.push(nodeDetails);
       }
 
       console.log(`Compiled node details: ${JSON.stringify(nodes)}`);
@@ -419,24 +466,26 @@
       nameElement.classList.add('node'); // Add a class for easier identification
       row.appendChild(nameElement);
 
-      var idElement = document.createElement('div');
-      idElement.textContent = node.id;
-      row.appendChild(idElement);
+      if(node.name !== "unknown") {
+        var idElement = document.createElement('div');
+        idElement.textContent = node.id;
+        row.appendChild(idElement);
 
-      var ipElement = document.createElement('div');
-      ipElement.textContent = node.ip;
-      row.appendChild(ipElement);
+        var ipElement = document.createElement('div');
+        ipElement.textContent = node.ip;
+        row.appendChild(ipElement);
 
-      var statusElement = document.createElement('div');
-      statusElement.textContent = node.status;
-      row.appendChild(statusElement);
+        var statusElement = document.createElement('div');
+        statusElement.textContent = node.status;
+        row.appendChild(statusElement);
 
-      // Add click event listener to each node element
-      row.addEventListener('click', function() {
-        showNodeDetails(node);
-      });
+        // Add click event listener to each node element
+        row.addEventListener('click', function () {
+          showNodeDetails(node);
+        });
 
-      nodeGrid.appendChild(row);
+        nodeGrid.appendChild(row);
+      }
     });
   }
 
@@ -545,6 +594,7 @@
 
   // Function to display the files tab
   function displayFilesTab() {
+    //fetchRemoteData();
     var fileGridFiles = document.getElementById('fileGridfiles');
     // Clear existing content
     fileGridFiles.innerHTML = '';
@@ -633,6 +683,7 @@
 
   // Function to handle color theme selection
   function handleColorThemeChange() {
+    //fetchRemoteData();
     var colorThemeSelect = document.getElementById('colorThemeSelect');
     var selectedTheme = colorThemeSelect.value;
 
@@ -670,15 +721,16 @@
     var colorThemeSelect = document.getElementById('colorThemeSelect');
     colorThemeSelect.value = 'white'; // Set dropdown value
     handleColorThemeChange(); // Apply selected theme
+    //fetchRemoteData();
   }
 
   // Function to update the number of active nodes in the Naming Server block
   function updateActiveNodesCount() {
-    var activeNodesCountElement = document.getElementById('activeNodesCount');
+    /*var activeNodesCountElement = document.getElementById('activeNodesCount');
     var activeNodesCount = nodes.reduce(function(acc, node) {
       return node.status === 'Active' ? acc + 1 : acc;
     }, 0);
-    activeNodesCountElement.textContent = activeNodesCount;
+    activeNodesCountElement.textContent = activeNodesCount;*/
   }
 
   // Update the number of active nodes when the page loads
@@ -690,9 +742,9 @@
   function activateNode(name,ip) {
     var node = findNodeByName(name); // Find the node object by ID
     if (!node) {
-      //const endPoint = `http://localhost:8080/gui/activate-node/${name}/${ip}`;
-      //getRequest(endPoint);
-      fetchRemoteData();
+      const endPoint = `http://localhost:8080/gui/activate-node/${name}/${ip}`;
+      postRequest(endPoint,"activate node");
+      //fetchRemoteData();
       populateNodes(); // Update the GUI
       populateNodesTab();
       showNodeDetails(node);
@@ -709,13 +761,14 @@
     if (node) {
       if (node.status !== 'Inactive') {
         node.status = 'Inactive'; // Set the node status to Inactive
-        //const endPoint = `http://localhost:8080/gui/kill-node/${nodeId}`;
-        //getRequest(endPoint);
-        fetchRemoteData();
+        const endPoint = `http://localhost:8080/gui/kill-node/${nodeId}`;
+        postRequest(endPoint,"kill node","");
+        nodeDetails = {};
+        showNodeDetails(null);
+        /*fetchRemoteData();
         populateNodes(); // Update the GUI
         populateNodesTab();
-        showNodeDetails(node);
-        updateActiveNodesCount();
+        updateActiveNodesCount();*/
       }
     }
   }
@@ -753,10 +806,15 @@
   }
 
   function validateAndActivate() {
-    const nodeNameInput = document.getElementById('nodeName').value.trim();
-    const ipAddressInput = document.getElementById('ipAddress').value.trim();
+    const nodeNameInputElement = document.getElementById('nodeName');
+    const ipAddressInputElement = document.getElementById('ipAddress');
+    const nodeNameInput = nodeNameInputElement.value.trim();
+    const ipAddressInput = ipAddressInputElement.value.trim();
 
     const errorText = document.getElementById('activationError');
+
+    console.log('Node Name:', nodeNameInput);
+    console.log('IP Address: ', ipAddressInput);
 
     if (nodeNameInput === '' || ipAddressInput === '') {
       errorText.textContent = 'Please fill in both Node Name and IP Address.';
@@ -767,9 +825,17 @@
     }
 
     activateNode(nodeNameInput, ipAddressInput);
+
+    // Clear the input fields
+    nodeNameInputElement.value = '';
+    ipAddressInputElement.value = '';
+
+    console.log('Inputs cleared');
   }
 
-  // Function to fetch remote data every 5 seconds
+
+
+  // Function to fetch remote data every 1 seconds
   function fetchDataPeriodically() {
     // Call fetchRemoteData immediately
     fetchRemoteData();
@@ -786,10 +852,9 @@
   // Initial population of nodes when the page loads
   document.addEventListener('DOMContentLoaded', function() {
     // Call the function to start fetching data periodically
-    fetchDataPeriodically();
+    //fetchDataPeriodically();
     fetchRemoteData();
     calculateFileCounts();
-    populateNodes(); // we want nodes to be ready when we see home screen!
     initializeColorTheme(); // Initialize color theme
     showTab('home'); // Default to the Home tab
   });

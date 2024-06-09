@@ -17,13 +17,11 @@ import origin.project.server.repository.NamingRepository;
 import origin.project.server.service.MessageService;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
+import java.util.*;
 import java.util.logging.Logger;
 
 @Getter
@@ -133,71 +131,23 @@ public class CallsGui {
         }
     }
 
-    /*@PostMapping("/kill-node/{hashID}")
-    public void killNode(@PathVariable("hashID") int hashID) {
+    @PostMapping("/kill-node/{hashID}")
+    public void killNode(@PathVariable("hashID") int hashID) throws IOException {
         Optional<NamingEntry> optionalEntry = namingRepository.findById(hashID);
         if(optionalEntry.isPresent()) {
             InetAddress ipAddress = optionalEntry.get().getIP();
+            String ipAddressString = ipAddress.getHostAddress();
             String nodeUrl = "http:/" + ipAddress + ":" + namingServerController.getNodePort() + "/node/kill-node";
-            String response = messageService.getRequest(nodeUrl, "kill node");
-            logger.info("node " + ipAddress + " killed");
+            String response = messageService.getRequest(nodeUrl,"kill node");
+            Process p = Runtime.getRuntime().exec(new String[]{"bash","-c","ssh root@" + ipAddressString + " \"kill -INT " + response + "\""});
+            logger.info("node " + ipAddress + " killed command = " + "ssh root@" + ipAddressString + " \"kill -INT " + response + "\"");
         }
     }
 
-    @PostMapping("/activate-node/{name}/{ip}")
-    public ResponseEntity<String> activateNode(@PathVariable String name, @PathVariable String ip) {
-        String remoteHost = ip;  // The IP of the remote node
-        String user = "2053 root";  // SSH username for the remote node
-        //String password = "your-password";  // SSH password for the remote node
-
-        try {
-            JSch jsch = new JSch();
-            Session session = jsch.getSession(user, remoteHost, 8080);
-            //session.setPassword(password);
-
-            // Avoid asking for key confirmation
-            Properties config = new Properties();
-            config.put("StrictHostKeyChecking", "no");
-            session.setConfig(config);
-
-            session.connect();
-
-            // Construct the command
-            String command = String.format("java -jar ProjectYNode.jar \"%s\" \"%s\"", name, ip);
-
-            ChannelExec channel = (ChannelExec) session.openChannel("exec");
-            channel.setCommand(command);
-
-            channel.setInputStream(null);
-            InputStream in = channel.getInputStream();
-
-            channel.connect();
-
-            // Read the output from the command
-            StringBuilder output = new StringBuilder();
-            byte[] tmp = new byte[1024];
-            while (true) {
-                while (in.available() > 0) {
-                    int i = in.read(tmp, 0, 1024);
-                    if (i < 0) break;
-                    output.append(new String(tmp, 0, i));
-                }
-                if (channel.isClosed()) {
-                    if (in.available() > 0) continue;
-                    int exitStatus = channel.getExitStatus();
-                    if (exitStatus == 0) {
-                        return ResponseEntity.ok("Node activated successfully:\n" + output.toString());
-                    } else {
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body("Error occurred while activating the node:\n" + output.toString());
-                    }
-                }
-                Thread.sleep(1000);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Exception occurred: " + e.getMessage());
-        }
-    }*/
+    @PostMapping("/activate-node/{name}/{ip}") // how de we know which node to call? For now hard coded!
+    public void activateNode(@PathVariable String name, @PathVariable String ip) throws IOException {
+        logger.info("enterd activate node: " + name + " " + ip);
+        Process p = Runtime.getRuntime().exec(new String[]{"bash","-c","ssh root@" + ip + " \"cd /root/Nigel; java -jar ProjectYNode.jar " + name + " "  + ip + "\""});
+        logger.info("executed activate node: " + p.toString());
+    }
 }
