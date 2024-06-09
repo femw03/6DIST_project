@@ -2,18 +2,28 @@ package origin.project.server.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.repository.NamingRepository;
 import origin.project.server.service.MessageService;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.logging.Logger;
 
 @Getter
@@ -131,6 +141,63 @@ public class CallsGui {
             String nodeUrl = "http:/" + ipAddress + ":" + namingServerController.getNodePort() + "/node/kill-node";
             String response = messageService.getRequest(nodeUrl, "kill node");
             logger.info("node " + ipAddress + " killed");
+        }
+    }
+
+    @PostMapping("/activate-node/{name}/{ip}")
+    public ResponseEntity<String> activateNode(@PathVariable String name, @PathVariable String ip) {
+        String remoteHost = ip;  // The IP of the remote node
+        String user = "2053 root";  // SSH username for the remote node
+        //String password = "your-password";  // SSH password for the remote node
+
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(user, remoteHost, 8080);
+            //session.setPassword(password);
+
+            // Avoid asking for key confirmation
+            Properties config = new Properties();
+            config.put("StrictHostKeyChecking", "no");
+            session.setConfig(config);
+
+            session.connect();
+
+            // Construct the command
+            String command = String.format("java -jar ProjectYNode.jar \"%s\" \"%s\"", name, ip);
+
+            ChannelExec channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand(command);
+
+            channel.setInputStream(null);
+            InputStream in = channel.getInputStream();
+
+            channel.connect();
+
+            // Read the output from the command
+            StringBuilder output = new StringBuilder();
+            byte[] tmp = new byte[1024];
+            while (true) {
+                while (in.available() > 0) {
+                    int i = in.read(tmp, 0, 1024);
+                    if (i < 0) break;
+                    output.append(new String(tmp, 0, i));
+                }
+                if (channel.isClosed()) {
+                    if (in.available() > 0) continue;
+                    int exitStatus = channel.getExitStatus();
+                    if (exitStatus == 0) {
+                        return ResponseEntity.ok("Node activated successfully:\n" + output.toString());
+                    } else {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("Error occurred while activating the node:\n" + output.toString());
+                    }
+                }
+                Thread.sleep(1000);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Exception occurred: " + e.getMessage());
         }
     }*/
 }

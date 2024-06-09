@@ -31,8 +31,7 @@ public class NodeController {
 
     /*@PostMapping("/kill-node")
     public void killNode() {
-        ConfigurableApplicationContext ctx = node.getCtx();
-        ctx.close();
+        SpringApplication.exit(),
     }*/
 
     @GetMapping("/get-name")

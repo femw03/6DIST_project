@@ -28,7 +28,7 @@ public class NodeRunnable {
         System.setProperty("localfiles.path", "data/local");
         System.setProperty("replicatedfiles.path", "data/replicated");
 
-        ConfigurableApplicationContext ctx = SpringApplication.run(origin.project.client.NodeRunnable.class, args);
+        SpringApplication.run(origin.project.client.NodeRunnable.class, args);
 
     }
 

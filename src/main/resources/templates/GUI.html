@@ -144,8 +144,21 @@
   <!-- Nodes tab -->
   <div id="nodes" class="tab-content" style="display: none;">
     <h1>Network Monitor - Nodes</h1>
-    <div class="node-grid" id="nodeGridNodes">
+    <div class="node-grid" id="nodeGridNodes" style="margin-bottom: 20px;">
       <!-- Node grid will be dynamically added here -->
+    </div>
+    <!-- New activate block -->
+    <div class="block">
+      <div class="block-title">Activate</div>
+      <form id="activateForm">
+        <label for="nodeName">Node Name:</label>
+        <input type="text" id="nodeName" name="nodeName">
+        <br>
+        <label for="ipAddress">IP Address:</label>
+        <input type="text" id="ipAddress" name="ipAddress">
+        <br>
+        <button type="button" class="btn btn-activate" onclick="validateAndActivate()">Activate</button>
+      </form>
     </div>
   </div>
 
@@ -347,6 +360,9 @@
       }
 
       console.log(`Compiled node details: ${JSON.stringify(nodes)}`);
+      calculateFileCounts();
+      populateNodes();
+
     } catch (error) {
       console.error('Error fetching node data:', error);
 
@@ -385,30 +401,7 @@
     }
   }
 
-  //sample data for nodes
-  var nodes = [
-    /*{
-      name: 'Node 1',
-      id: '123456',
-      ip: '192.168.1.101',
-      prevId: '654321',
-      nextId: '789012',
-      status: 'Active',
-      localFiles: ['file1.txt', 'file2.txt', 'file3.txt'], // Example local files
-      replicatedFiles: ['file4.txt', 'file5.txt'], // Example replicated files
-    },
-    {
-      name: 'Node 2',
-      id: '654321',
-      ip: '192.168.1.102',
-      prevId: '123456',
-      nextId: '789012',
-      status: 'Inactive',
-      localFiles: ['file6.txt', 'file7.txt'], // Example local files
-      replicatedFiles: ['file8.txt'], // Example replicated files
-    }*/
-  ];
-
+  var nodes = [];
 
   // Function to populate the Nodes block in the Home tab
   function populateNodes() {
@@ -527,15 +520,6 @@
       var statusElement = document.createElement('div');
       statusElement.textContent = node.status;
       row.appendChild(statusElement);
-
-      // Add Activate button
-      var activateButton = document.createElement('button');
-      activateButton.textContent = 'Activate';
-      activateButton.classList.add('btn', 'btn-activate');
-      activateButton.onclick = function() {
-        activateNode(node.id);
-      };
-      row.appendChild(activateButton);
 
       // Add Terminate button
       var terminateButton = document.createElement('button');
@@ -703,16 +687,19 @@
   });
 
   // Function to activate a node
-  function activateNode(nodeId) {
-    var node = findNodeById(nodeId); // Find the node object by ID
-    if (node) {
-      if (node.status !== 'Active') {
-        node.status = 'Active'; // Set the node status to Active
-        populateNodes(); // Update the GUI
-        populateNodesTab();
-        showNodeDetails(node);
-        updateActiveNodesCount();
-      }
+  function activateNode(name,ip) {
+    var node = findNodeByName(name); // Find the node object by ID
+    if (!node) {
+      //const endPoint = `http://localhost:8080/gui/activate-node/${name}/${ip}`;
+      //getRequest(endPoint);
+      fetchRemoteData();
+      populateNodes(); // Update the GUI
+      populateNodesTab();
+      showNodeDetails(node);
+      updateActiveNodesCount();
+    }
+    else {
+        //node already exists!
     }
   }
 
@@ -724,6 +711,7 @@
         node.status = 'Inactive'; // Set the node status to Inactive
         //const endPoint = `http://localhost:8080/gui/kill-node/${nodeId}`;
         //getRequest(endPoint);
+        fetchRemoteData();
         populateNodes(); // Update the GUI
         populateNodesTab();
         showNodeDetails(node);
@@ -755,8 +743,50 @@
     return null; // Node not found
   }
 
+  function findNodeByName(nodeName) {
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].name === nodeName) {
+        return nodes[i];
+      }
+    }
+    return null; // Node not found
+  }
+
+  function validateAndActivate() {
+    const nodeNameInput = document.getElementById('nodeName').value.trim();
+    const ipAddressInput = document.getElementById('ipAddress').value.trim();
+
+    const errorText = document.getElementById('activationError');
+
+    if (nodeNameInput === '' || ipAddressInput === '') {
+      errorText.textContent = 'Please fill in both Node Name and IP Address.';
+      errorText.style.color = 'red';
+      return;
+    } else {
+      errorText.textContent = ''; // Clear the error message if inputs are valid
+    }
+
+    activateNode(nodeNameInput, ipAddressInput);
+  }
+
+  // Function to fetch remote data every 5 seconds
+  function fetchDataPeriodically() {
+    // Call fetchRemoteData immediately
+    fetchRemoteData();
+    calculateFileCounts();
+    populateNodes();
+    showNodeDetails();
+    populateNodesTab();
+    displayFilesTab();
+
+    // Call fetchRemoteData every second (1000 milliseconds)
+    setInterval(fetchRemoteData, 1000);
+  }
+
   // Initial population of nodes when the page loads
   document.addEventListener('DOMContentLoaded', function() {
+    // Call the function to start fetching data periodically
+    fetchDataPeriodically();
     fetchRemoteData();
     calculateFileCounts();
     populateNodes(); // we want nodes to be ready when we see home screen!
