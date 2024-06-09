@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import origin.project.client.Node;
@@ -25,6 +28,13 @@ public class NodeController {
     private Node node;
     @Autowired
     private FileService fileService;
+
+    /*@PostMapping("/kill-node")
+    public void killNode() {
+        ConfigurableApplicationContext ctx = node.getCtx();
+        ctx.close();
+    }*/
+
     @GetMapping("/get-name")
     public String getNodeName() {
         return node.getNodeName();

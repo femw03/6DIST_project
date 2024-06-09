@@ -192,7 +192,7 @@
       //document.getElementById('debugResponse').textContent += `\nRaw response data: ${data}`;
 
       // Attempt to parse JSON data
-      if(typeof data != "string") {
+      if(typeof data !== "string" && data !== "") {
         try {
           const parsedData = JSON.parse(data);
           return parsedData;
@@ -324,7 +324,8 @@
         // Fetch local files
         try {
           const endpointNodeLocalFiles = `http://localhost:8080/gui/get-nodeLocalFiles/${hash}`;
-          nodeDetails.localFiles = await getRequest(endpointNodeLocalFiles);
+          var localFiles = await getRequest(endpointNodeLocalFiles);
+          nodeDetails.localFiles = JSON.parse(localFiles);
         } catch (error) {
           console.error(`Failed to fetch local files for hash ${hash}: ${error}`);
           nodeDetails.localFiles = [];
@@ -333,7 +334,8 @@
         // Fetch replicated files
         try {
           const endpointNodeReplicatedFiles = `http://localhost:8080/gui/get-nodeReplicatedFiles/${hash}`;
-          nodeDetails.replicatedFiles = await getRequest(endpointNodeReplicatedFiles);
+          var replicatedFiles = await getRequest(endpointNodeReplicatedFiles);
+          nodeDetails.replicatedFiles = JSON.parse(replicatedFiles);
         } catch (error) {
           console.error(`Failed to fetch replicated files for hash ${hash}: ${error}`);
           nodeDetails.replicatedFiles = [];
@@ -375,6 +377,7 @@
     if (tabName === 'home') {
       populateNodes();
       fetchRemoteData();
+      calculateFileCounts();
     } else if (tabName === 'nodes') {
       populateNodesTab();
     } else if (tabName === 'files') {
@@ -719,6 +722,8 @@
     if (node) {
       if (node.status !== 'Inactive') {
         node.status = 'Inactive'; // Set the node status to Inactive
+        //const endPoint = `http://localhost:8080/gui/kill-node/${nodeId}`;
+        //getRequest(endPoint);
         populateNodes(); // Update the GUI
         populateNodesTab();
         showNodeDetails(node);

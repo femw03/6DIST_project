@@ -6,10 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.repository.NamingRepository;
 import origin.project.server.service.MessageService;
@@ -125,4 +122,15 @@ public class CallsGui {
             return -1;
         }
     }
+
+    /*@PostMapping("/kill-node/{hashID}")
+    public void killNode(@PathVariable("hashID") int hashID) {
+        Optional<NamingEntry> optionalEntry = namingRepository.findById(hashID);
+        if(optionalEntry.isPresent()) {
+            InetAddress ipAddress = optionalEntry.get().getIP();
+            String nodeUrl = "http:/" + ipAddress + ":" + namingServerController.getNodePort() + "/node/kill-node";
+            String response = messageService.getRequest(nodeUrl, "kill node");
+            logger.info("node " + ipAddress + " killed");
+        }
+    }*/
 }

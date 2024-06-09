@@ -3,6 +3,7 @@ package origin.project.client;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 import origin.project.client.model.dto.LogEntry;
 
@@ -38,6 +39,8 @@ public class Node {
     private String LOCAL_FILES_PATH;
     @Value("${replicatedfiles.path}")
     private String REPLICATED_FILES_PATH;
+    /*@Value("ctx")
+    private ConfigurableApplicationContext ctx;*/
 
     private int currentID;
     private int nextID=-1;
