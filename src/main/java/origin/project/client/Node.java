@@ -6,7 +6,6 @@ import jade.core.Runtime;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +15,7 @@ import origin.project.client.model.dto.LogEntry;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -60,15 +60,19 @@ public class Node {
 
     Logger logger = Logger.getLogger(Node.class.getName());
 
-    @PostConstruct
-    public void init() throws StaleProxyException {
-        // create the main-container.
-        // This is the central container responsible for managing agents and other containers.
+    public void startAgents(ArrayList<String> initialFileList) throws StaleProxyException {
+        // create the agent-container.
+        // This container connects to the main-container on the server.
         Runtime rt = Runtime.instance();
-        Profile profile = new ProfileImpl();
-        AgentContainer mainContainer = rt.createMainContainer(profile);
+        String serverIP = namingServerIp.toString();
+        serverIP = serverIP.replace("/", "");
+        logger.info(serverIP);
+        Profile profile = new ProfileImpl(serverIP, 4242, "SystemY");
+        profile.setParameter(Profile.CONTAINER_NAME, "Container"+currentID);
+        AgentContainer mainContainer = rt.createAgentContainer(profile);
         // create a SyncAgent in the container.
-        AgentController controller = mainContainer.createNewAgent(nodeName, SyncAgent.class.getName(), new Object[] {this});
+        Object[] objtab = new Object[] {this, initialFileList};
+        AgentController controller = mainContainer.createNewAgent("syncAgent"+currentID, SyncAgent.class.getName(), objtab);
         // start the SyncAgent.
         controller.start();
     }
