@@ -1,6 +1,7 @@
 package origin.project.client.controller;
 
 
+import com.google.gson.Gson;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
 import lombok.Getter;
@@ -23,27 +24,33 @@ import java.util.logging.Logger;
 @Getter
 @Setter
 @RestController
-@RequestMapping("/failure")
+@RequestMapping("/failure-agent")
 public class FailureAgentController {
 
     private Logger logger = Logger.getLogger(FailureAgentController.class.getName());
 
+    @Autowired
     private Node node;
 
     @Autowired
     private MessageService messageService;
 
-    @PostMapping("/failure-agent")
-    public ResponseEntity<String> previousNodeSendsFailureAgent(@RequestBody FailureAgentTransfer failureAgentTransfer) throws StaleProxyException {
+    @PostMapping("/run-failure-agent")
+    public ResponseEntity<String> previousNodeSendsFailureAgent(@RequestBody String failureAgentTransferJSON) throws StaleProxyException {
+        Gson gson = new Gson();
+        FailureAgentTransfer failureAgentTransfer = gson.fromJson(failureAgentTransferJSON, FailureAgentTransfer.class);
+        logger.info("Received " + failureAgentTransfer);
+
         String IPFailingNode = failureAgentTransfer.getIPFailingNode();
         int IDStartingNode = failureAgentTransfer.getIDStartingNode();
 
         if (IPFailingNode == null || IPFailingNode.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Ip of Failing node");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid IP of Failing node");
         }
 
         // create a FailureAgent in the container.
-        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPFailingNode, IDStartingNode, node, messageService});
+        String agentName = node.getNodeName() + " FailureAgent(" + IPFailingNode + ", " + IDStartingNode + ")";
+        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), new Object[] {IPFailingNode, IDStartingNode, node, messageService});
         // start the FailureAgent.
         controller.start();
         return ResponseEntity.ok("Failure agent received successfully.");

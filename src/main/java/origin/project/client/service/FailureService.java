@@ -30,6 +30,9 @@ public class FailureService {
         String IPnext = messageService.getRequest(URLnext, "get next ip");
         IPnext = IPnext.replace("\"", "");              // remove double quotes
 
+        // We activate the Failure agent in the node before the failed node (this way we only activate 1 agent per failed node)
+        boolean executeFailureAgent = IPnext.equals(IPaddress);
+
         // previous
         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
         String IPprevious = messageService.getRequest(URLprevious, "get previous ip");
@@ -76,7 +79,9 @@ public class FailureService {
 
         // Start the FailureAgent
         try {
-            startFailureAgent(IPaddress);
+            if (executeFailureAgent) {
+                startFailureAgent(IPaddress);
+            }
         } catch (StaleProxyException e) {
             e.printStackTrace();
         }
@@ -85,7 +90,8 @@ public class FailureService {
 
     private void startFailureAgent(String IPadress) throws StaleProxyException {
         // create a FailureAgent in the container.
-        AgentController controller = node.getMainContainer().createNewAgent(node.getNodeName() + "failure agent", FailureAgent.class.getName(), new Object[] {IPadress, node.getCurrentID(), node, messageService});
+        String agentName = node.getNodeName() + " FailureAgent(" + IPadress + ", " + node.getCurrentID() + ")";
+        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), new Object[] {IPadress, node.getCurrentID(), node, messageService});
         // start the FailureAgent.
         controller.start();
     }

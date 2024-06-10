@@ -72,6 +72,9 @@ import origin.project.client.Node;
 import origin.project.client.model.dto.FailureAgentTransfer;
 import origin.project.client.service.MessageService;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public class FailureAgent extends Agent {
@@ -125,31 +128,37 @@ public class FailureAgent extends Agent {
 
     @Override
     protected void takeDown() {
+        logger.info("Shutting down failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
         // Deconstruction of the agent
         if (node.getNextID() != IDStartingNode && node.getExistingNodes() > 1) {
             logger.info("Sending failure agent to next node");
-            sendFailureAgentToNextNode();
+            try {
+                sendFailureAgentToNextNode();
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
         } else {
-            logger.info("Only 1 node in the network or failure agent reached the end of the loop." );
-            logger.info("Shutting down failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
+            logger.info("Failure agent reached the end of the loop, so it won't be send to the next node." );
         }
     }
 
-    private void sendFailureAgentToNextNode() {
+    private void sendFailureAgentToNextNode() throws UnknownHostException {
         String targetURL = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getNextID();
-        String targetIP = messageService.getRequest(targetURL, "get target ip");
-        targetIP = targetIP.replace("\"", "");              // remove double quotes
+        String targetIPString = messageService.getRequest(targetURL, "get target ip");
+        targetIPString = targetIPString.replace("\"", "");              // remove double quotes
+        InetAddress targetIP = InetAddress.getByName(targetIPString);
 
-        String failureAgentTransferUrl = "http:/" + targetIP + ":8080/failure/failure-agent";
+        String failureAgentTransferUrl = "http:/" + targetIP + ":8080/failure-agent/run-failure-agent";
 
-        logger.info("Sending failure agent to: " + failureAgentTransferUrl);
 
         // create Filetransfer-object and serialize
         Gson gson = new Gson();
         FailureAgentTransfer failureAgentTransfer = new FailureAgentTransfer(IPFailingNode, IDStartingNode);
         String failureAgentTransferJson = gson.toJson(failureAgentTransfer);
 
-        String response = messageService.postRequest(failureAgentTransferUrl, failureAgentTransferJson, "failure agent");
-        logger.info("response: " + response);
+        logger.info("Sending " + failureAgentTransfer + " to: " + failureAgentTransferUrl);
+
+        String response = messageService.postRequest(failureAgentTransferUrl, failureAgentTransferJson, "run failure agent");
+        logger.info(response);
     }
 }
