@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import origin.project.client.Node;
 import origin.project.client.agents.FailureAgent;
 import origin.project.client.model.dto.FailureAgentTransfer;
+import origin.project.client.service.FailureService;
 import origin.project.client.service.MessageService;
 
 import java.util.logging.Logger;
@@ -35,6 +36,9 @@ public class FailureAgentController {
     @Autowired
     private MessageService messageService;
 
+    @Autowired
+    private FailureService failureService;
+
     @PostMapping("/run-failure-agent")
     public ResponseEntity<String> previousNodeSendsFailureAgent(@RequestBody String failureAgentTransferJSON) throws StaleProxyException {
         Gson gson = new Gson();
@@ -48,11 +52,9 @@ public class FailureAgentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid IP of Failing node");
         }
 
-        // create a FailureAgent in the container.
-        String agentName = node.getNodeName() + " FailureAgent(" + IPFailingNode + ", " + IDStartingNode + ")";
-        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), new Object[] {IPFailingNode, IDStartingNode, node, messageService});
-        // start the FailureAgent.
-        controller.start();
+        // run the failure agent
+        failureService.startFailureAgent(IPFailingNode, IDStartingNode);
+
         return ResponseEntity.ok("Failure agent received successfully.");
     }
 }

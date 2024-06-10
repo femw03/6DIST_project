@@ -142,8 +142,20 @@ public class FailureAgent extends Agent {
         }
     }
 
-    private void sendFailureAgentToNextNode() throws UnknownHostException {
+    private void sendFailureAgentToNextNode() throws UnknownHostException{
+        // Sometimes the nextID needs to converge (if not converged -> nextID = -1)
+        // we wait until it is converged
+        try {
+            while (node.getNextID() == -1) {
+                logger.info("Waiting for next ID to converge");
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         String targetURL = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getNextID();
+        logger.info("Retreiving IP for ID: " + node.getNextID() + "With URL: " + targetURL);
         String targetIPString = messageService.getRequest(targetURL, "get target ip");
         targetIPString = targetIPString.replace("\"", "");              // remove double quotes
         InetAddress targetIP = InetAddress.getByName(targetIPString);

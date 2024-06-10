@@ -20,6 +20,7 @@ public class ShutdownService {
 
     Logger logger = Logger.getLogger(ShutdownService.class.getName());
 
+    /*
     @PreDestroy
     public void shutdown() {
         System.out.println("\n Initiating shutdown process... \n");
@@ -70,6 +71,6 @@ public class ShutdownService {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-    }
+    }*/
     // moved replication-shutdownProcess to replicationService.
 }
