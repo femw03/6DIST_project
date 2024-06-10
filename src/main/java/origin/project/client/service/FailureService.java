@@ -32,7 +32,7 @@ public class FailureService {
         String IPnext = messageService.getRequest(URLnext, "get next ip");
         IPnext = IPnext.replace("\"", "");              // remove double quotes
 
-        // We activate the Failure agent in the node before the failed node (this way we only activate 1 agent per failed node)
+        // activate the Failure agent in the node before the failed node (this way only one failure agent gets activated per failed node)
         boolean executeFailureAgent = IPnext.equals(IPaddress);
 
         // previous

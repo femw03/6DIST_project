@@ -88,7 +88,6 @@ public class FailureAgent extends Agent {
     private Logger logger = Logger.getLogger(FailureAgent.class.getName());
     private Node node;
     private String IPFailingNode;
-    // We need to know where the FailureAgent started, so we can terminate it once it has looped over all the nodes
     private int IDStartingNode;
 
     private MessageService messageService;
@@ -120,6 +119,7 @@ public class FailureAgent extends Agent {
         }
         logger.info("Finished setup failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
 
+        // add the behavior to resolve the files
         addBehaviour(new ResolveFiles(this));
     }
 
@@ -131,7 +131,7 @@ public class FailureAgent extends Agent {
         }
         @Override
         public void action() {
-            // We resolve the local and replicated files
+            // resolve the local and replicated files
             try {
                 replicationService.resolveFilesDuringFailure(IPFailingNode);
             } catch (IOException e) {
@@ -161,7 +161,7 @@ public class FailureAgent extends Agent {
 
     private void sendFailureAgentToNextNode() throws UnknownHostException{
         // Sometimes the nextID needs to converge (if not converged -> nextID = -1)
-        // we wait until it is converged
+        // wait until it is converged
         try {
             while (node.getNextID() == -1) {
                 logger.info("Waiting for next ID to converge");
@@ -171,6 +171,7 @@ public class FailureAgent extends Agent {
             e.printStackTrace();
         }
 
+        // Get the correct URL
         String targetURL = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getNextID();
         String targetIPString = messageService.getRequest(targetURL, "get target ip");
         targetIPString = targetIPString.replace("\"", "");              // remove double quotes
@@ -179,7 +180,7 @@ public class FailureAgent extends Agent {
         String failureAgentTransferUrl = "http:/" + targetIP + ":8080/failure-agent/run-failure-agent";
 
 
-        // create Filetransfer-object and serialize
+        // create the failureAgenTransfer-object and serialize
         Gson gson = new Gson();
         FailureAgentTransfer failureAgentTransfer = new FailureAgentTransfer(IPFailingNode, IDStartingNode);
         String failureAgentTransferJson = gson.toJson(failureAgentTransfer);

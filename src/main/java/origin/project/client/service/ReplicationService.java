@@ -362,16 +362,18 @@ public class ReplicationService {
         logger.info("Resolving replicated files that were owned by the failing node.");
         // get filenames of replicated files that were local files from the failing node
         for (LogEntry e : logRepository.findAll()) {
-            logger.info("Comparing file owner: " + e.getDownloadLocationID().toString());
-            logger.info("And failing node IP: " + "/" + failingNodeIP);
             if (e.getDownloadLocationID().toString().equals("/" + failingNodeIP)) {
+                String fileName = e.getFileName();
 
-                logger.info("Moving file: " + e.getFileName());
+                logger.info("Moving file: " +fileName);
                 // move the file from the replicated folder to the local folder
                 // the update phase will replicate the file again
-                String sourceFile = node.getREPLICATED_FILES_PATH() + "/" + e.getFileName();
-                String destinationFile = node.getLOCAL_FILES_PATH() + "/" + e.getFileName();
+                String sourceFile = node.getREPLICATED_FILES_PATH() + "/" + fileName;
+                String destinationFile = node.getLOCAL_FILES_PATH() + "/" + fileName;
                 fileService.moveFile(sourceFile, destinationFile);
+
+                // Remove the file from the log
+                logRepository.deleteByFileName(fileName);
             }
         }
     }
