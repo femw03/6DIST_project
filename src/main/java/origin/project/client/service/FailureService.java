@@ -15,6 +15,8 @@ import java.util.logging.Logger;
 @Service
 public class FailureService {
     @Autowired
+    private ReplicationService replicationService;
+    @Autowired
     private MessageService messageService;
     @Autowired
     Node node;
@@ -91,7 +93,7 @@ public class FailureService {
     public void startFailureAgent(String IPadress, int startID) throws StaleProxyException {
         // create a FailureAgent in the container.
         String agentName = node.getNodeName() + " FailureAgent(" + IPadress + ", " + startID + ")";
-        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), new Object[] {IPadress, startID, node, messageService});
+        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), new Object[] {IPadress, startID, node, messageService, replicationService});
         // start the FailureAgent.
         controller.start();
     }

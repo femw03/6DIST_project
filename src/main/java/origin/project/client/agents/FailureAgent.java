@@ -73,7 +73,9 @@ import origin.project.client.Node;
 import origin.project.client.model.dto.FailureAgentTransfer;
 import origin.project.client.model.dto.LogEntry;
 import origin.project.client.service.MessageService;
+import origin.project.client.service.ReplicationService;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -91,6 +93,8 @@ public class FailureAgent extends Agent {
 
     private MessageService messageService;
 
+    private ReplicationService replicationService;
+
     @Override
     protected void setup() {
         // Construction of the agent
@@ -102,6 +106,7 @@ public class FailureAgent extends Agent {
             IDStartingNode = (Integer) args[1];
             node = (Node) args[2];
             messageService = (MessageService) args[3];
+            replicationService = (ReplicationService) args[4];
 
             if (IPFailingNode == null) {
                 logger.info("IP of the failing node is null");
@@ -115,18 +120,23 @@ public class FailureAgent extends Agent {
         }
         logger.info("Finished setup failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
 
-        addBehaviour(new ResolveFilesOwnedByFailingNode(this));
+        addBehaviour(new ResolveFiles(this));
     }
 
 
-    private class ResolveFilesOwnedByFailingNode extends OneShotBehaviour {
+    private class ResolveFiles extends OneShotBehaviour {
 
-        public ResolveFilesOwnedByFailingNode(final Agent agent) {
+        public ResolveFiles(final Agent agent) {
             super(agent);
         }
         @Override
         public void action() {
-            // Scan the file log for any files that the failed node had and update them
+            // We resolve the local and replicated files
+            try {
+                replicationService.resolveFilesDuringFailure(IPFailingNode);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
             // The agent has done its job and can be deconstructed
             doDelete();
