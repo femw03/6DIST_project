@@ -67,13 +67,17 @@ package origin.project.client.agents;
 import com.google.gson.Gson;
 import jade.core.Agent;
 import jade.core.behaviours.*;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FailureAgentTransfer;
+import origin.project.client.model.dto.LogEntry;
 import origin.project.client.service.MessageService;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -98,6 +102,7 @@ public class FailureAgent extends Agent {
             IDStartingNode = (Integer) args[1];
             node = (Node) args[2];
             messageService = (MessageService) args[3];
+
             if (IPFailingNode == null) {
                 logger.info("IP of the failing node is null");
             }
@@ -122,6 +127,8 @@ public class FailureAgent extends Agent {
         @Override
         public void action() {
             // Scan the file log for any files that the failed node had and update them
+
+            // The agent has done its job and can be deconstructed
             doDelete();
         }
     }
@@ -131,7 +138,7 @@ public class FailureAgent extends Agent {
         logger.info("Shutting down failure agent with failing node IP: " + IPFailingNode + " and start ID: " + IDStartingNode);
         // Deconstruction of the agent
         if (node.getNextID() != IDStartingNode && node.getExistingNodes() > 1) {
-            logger.info("Sending failure agent to next node");
+            logger.info("Sending failure agent to next node.");
             try {
                 sendFailureAgentToNextNode();
             } catch (UnknownHostException e) {
@@ -155,7 +162,6 @@ public class FailureAgent extends Agent {
         }
 
         String targetURL = node.getNamingServerUrl() + "/get-IP-by-hash/" + node.getNextID();
-        logger.info("Retreiving IP for ID: " + node.getNextID() + "With URL: " + targetURL);
         String targetIPString = messageService.getRequest(targetURL, "get target ip");
         targetIPString = targetIPString.replace("\"", "");              // remove double quotes
         InetAddress targetIP = InetAddress.getByName(targetIPString);
@@ -167,8 +173,6 @@ public class FailureAgent extends Agent {
         Gson gson = new Gson();
         FailureAgentTransfer failureAgentTransfer = new FailureAgentTransfer(IPFailingNode, IDStartingNode);
         String failureAgentTransferJson = gson.toJson(failureAgentTransfer);
-
-        logger.info("Sending " + failureAgentTransfer + " to: " + failureAgentTransferUrl);
 
         String response = messageService.postRequest(failureAgentTransferUrl, failureAgentTransferJson, "run failure agent");
         logger.info(response);
