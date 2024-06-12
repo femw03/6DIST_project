@@ -84,7 +84,13 @@ public class ReplicationService {
         System.out.println("replicated path: " + node.getREPLICATED_FILES_PATH());
         // verify local files and send hash-values to naming server
         startUp();
-        node.startAgents(currentLocalFiles);
+        new Thread(() -> {
+            try {
+                node.startAgents(this);
+            } catch (StaleProxyException e) {
+                throw new RuntimeException(e);
+            }
+        }).start(); // pass replicationService to Agent to update fileList.
 
         // start update thread
         updateThreadRunning = true;

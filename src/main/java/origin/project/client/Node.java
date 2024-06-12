@@ -12,11 +12,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import origin.project.client.agents.SyncAgent;
 import origin.project.client.model.dto.LogEntry;
+import origin.project.client.service.ReplicationService;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 @Getter
@@ -58,9 +60,11 @@ public class Node {
     private boolean newNode = false;
     private Map<String, LogEntry> log;
 
+    private ConcurrentHashMap<String, Boolean> nodeFileMap;
+
     Logger logger = Logger.getLogger(Node.class.getName());
 
-    public void startAgents(ArrayList<String> initialFileList) throws StaleProxyException {
+    public void startAgents(ReplicationService replicationService) throws StaleProxyException {
         // create the agent-container.
         // This container connects to the main-container on the server.
         Runtime rt = Runtime.instance();
@@ -70,9 +74,11 @@ public class Node {
         Profile profile = new ProfileImpl(serverIP, 4242, "SystemY");
         profile.setParameter(Profile.CONTAINER_NAME, "Container"+currentID);
         AgentContainer mainContainer = rt.createAgentContainer(profile);
+
         // create a SyncAgent in the container.
-        Object[] objtab = new Object[] {this, initialFileList};
+        Object[] objtab = new Object[] {this, replicationService};
         AgentController controller = mainContainer.createNewAgent("syncAgent"+currentID, SyncAgent.class.getName(), objtab);
+
         // start the SyncAgent.
         controller.start();
     }
