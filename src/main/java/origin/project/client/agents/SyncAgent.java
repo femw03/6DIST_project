@@ -7,6 +7,7 @@ import jade.core.behaviours.TickerBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.UnreadableException;
 import origin.project.client.Node;
+import origin.project.client.service.ReplicationService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ public class SyncAgent extends Agent {
     private Node node;
 
     private ConcurrentHashMap<String, Boolean> fileMap;
+
+    private ReplicationService replicationService;
 
     Logger logger = Logger.getLogger(SyncAgent.class.getName());
 
@@ -31,23 +34,18 @@ public class SyncAgent extends Agent {
                 logger.info("Node is null");
             }
 
-            ArrayList<String> initialFileList = castObjectToArrayListOfString(args[1]);
-
-
-            fileMap = new ConcurrentHashMap<>();
-            if (initialFileList.isEmpty()) {
-                logger.info("initial file list has size 0");
+            replicationService = (ReplicationService) args[1];
+            if (replicationService == null) {
+                System.err.println("Agent setup - replication service null");
+                System.exit(0);
             }
-            else {
-                for (String element : initialFileList) {
-                    fileMap.put(element, false);
-                }
-            }
+            fileMap = convertFileListToMap(replicationService.getCurrentLocalFiles());
+            node.setNodeFileMap(fileMap);
 
 
         }
         else {
-            System.err.println("Error during parameter transfer");
+            System.err.println("Error during parameter transfer SyncAgent");
             System.exit(0);
         }
         logger.info("Setting args successful for Sync Agent Node " + node.getNodeName());
@@ -75,9 +73,14 @@ public class SyncAgent extends Agent {
         @Override
         protected void onTick() {
             // if another node is present in the network
+            logger.info("file map before update " + fileMap);
+            updateFileMapWithFileList();
+            logger.info("file map after update " + fileMap);
+
             System.out.println(node.getExistingNodes());
             boolean nextNodeAvailable = node.getExistingNodes() > 1
                     && (node.getNextID() != node.getCurrentID() || node.getNextID() != -1);
+
             if (nextNodeAvailable) {
                 logger.info("RequestFileMap - nextNodeAvailable");
                 // Create a message
@@ -130,18 +133,25 @@ public class SyncAgent extends Agent {
         }
     }
 
-    public ArrayList<String> castObjectToArrayListOfString(Object obj) {
-        ArrayList<String> arrayList = new ArrayList<>();
-        // Solve unchecked cast of Object to ArrayList<String>
-        if (obj instanceof ArrayList<?> templist) {
-            for (Object e : templist) {
-                if (e instanceof String) {
-                    arrayList.add((String) e);
-                }
+    /**
+     * Update the Agent's file map with the changes in the replication file list.
+     */
+    public void updateFileMapWithFileList() {
+        ArrayList<String> fileList = replicationService.getCurrentLocalFiles();
 
+        // if file in fileList, not in Map = add to fileMap.
+        for (String name : fileList) {
+            if (!fileMap.containsKey(name)) {
+                fileMap.put(name, false);
             }
         }
-        return arrayList;
+
+        // if file in Map, not in fileList = remove from fileMap.
+        for (String name : fileMap.keySet()) {
+            if (!fileList.contains(name)) {
+                fileMap.remove(name);
+            }
+        }
     }
 
     public ConcurrentHashMap<String, Boolean> castObjectToMapStringBoolean(Object object) {
@@ -162,6 +172,19 @@ public class SyncAgent extends Agent {
         }
     }
 
+    public ConcurrentHashMap<String, Boolean> convertFileListToMap(ArrayList<String> arrayList) {
+        ConcurrentHashMap<String, Boolean> map = new ConcurrentHashMap<>();
+        if (arrayList.isEmpty()) {
+            logger.info("Initial file list has size 0. Returning empty map");
+            return map;
+        }
+
+        for (String element : arrayList) {
+            map.put(element, false);
+        }
+        return map;
+    }
+
     public void handleConfirmMessage(ACLMessage msg) {
         //String content = msg.getContent();
 //        System.out.println("Agent " + getLocalName() + " received CONFIRM: " + content);
@@ -169,15 +192,28 @@ public class SyncAgent extends Agent {
         Object contentObject;
         try {
             contentObject = msg.getContentObject();
-            ConcurrentHashMap<String, Boolean> newFileLog = castObjectToMapStringBoolean(contentObject);
-            if (newFileLog != null) {
-//
-//                fileMap.putAll(newFileLog);
-                System.out.println(newFileLog);
+            ConcurrentHashMap<String, Boolean> neighborFileMap = castObjectToMapStringBoolean(contentObject);
+            if (neighborFileMap != null) {
+
+                System.out.println(neighborFileMap);
+                System.out.println("Old file map: " + fileMap);
+
+                for (String fileNeighbor : neighborFileMap.keySet()) {
+                    if (fileMap.containsKey(fileNeighbor)) {
+                        // If our fileMap contains file, check the locks.
+                        // perform OR : true || false, false || true, true || true == true
+                        fileMap.put(fileNeighbor, fileMap.get(fileNeighbor) || neighborFileMap.get(fileNeighbor));
+                    }
+                    else {
+                        fileMap.put(fileNeighbor, false);
+                    }
+                }
+                System.out.println("New file map: " + fileMap);
+                node.setNodeFileMap(fileMap);
 
             }
             else {
-                boolean justBecauseIHaveTo = false;
+                logger.info("Handle confirm message - neighborFileMap was null");
             }
         } catch (UnreadableException e) {
             throw new RuntimeException(e);
@@ -196,119 +232,44 @@ public class SyncAgent extends Agent {
         } catch (IOException e) {
             logger.info("ERROR SyncAgent, msg.setContentObject(fileMap): " + e);
         }
-        this.send(reply);
+        send(reply);
 
     }
 
-    public void handleFailedMessage(ACLMessage msg) {
-
+    private void lockFile(String fileName) {
+        // Example of Distributed file locking logic
+        int fileLocked = isFileLocked(fileName);
+        switch(fileLocked) {
+            case 1:
+                System.out.println("File '" + fileName + "' is locked.");
+            case 0 :
+                System.out.println("File '" + fileName + "' not locked at the moment.");
+            default:
+                System.out.println("File was not found in the file map");
+        }
     }
+
+    private int isFileLocked(String fileName) {
+        if (fileMap.containsKey(fileName)) {
+            if (fileMap.get(fileName)) { // lock-value is true
+                return 1;
+            }
+            else { // lock is false
+                return 0;
+            }
+        }
+        else {
+            logger.info(fileName + "not found in the file map");
+            return -1;
+        }
+    }
+
 
 }
 
 
+/*
 
-
-
-/*package origin.project.client.agents;
-
-
-import jade.core.AID;
-import jade.core.Agent;
-import jade.core.behaviours.CyclicBehaviour;
-import jade.core.behaviours.TickerBehaviour;
-import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import origin.project.client.Node;
-
-import java.util.ArrayList;
-import java.util.List;
-
-@Service
-public class SyncAgent extends Agent {
-    @Autowired
-    private Node node;
-
-    private List<String> fileList;
-    private String nextNodeAgent;
-
-    protected void setup() {
-        // Initialize agent setup here
-        // Get the list of files this node owns
-        fileList = new ArrayList<>();
-        nextNodeAgent = "SyncAgent"+node.getNextID();
-
-        // Schedule periodic task for synchronization: updating file list and locking files
-        addBehaviour(new SyncBehavior());
-
-    }
-
-    public class SyncBehavior extends TickerBehaviour {
-
-        public SyncBehavior() {
-            // Specify the period for synchronization (e.g., every 10 seconds)
-            super(null, 5000); // Adjust the time interval as needed
-        }
-
-        @Override
-        protected void onTick() {
-            // Implement synchronization logic here
-            synchronizeFiles();
-        }
-
-        private void synchronizeFiles() {
-            // Logic to synchronize files with the next node
-            // You can implement communication with neighboring nodes here
-            // Example: Ask the next node's Sync Agent for its file list
-            // Update this node's file list based on the received information
-            // Implement distributed file locking logic if needed
-            ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-            msg.addReceiver(new AID(nextNodeAgent, AID.ISLOCALNAME));
-            msg.setContent("Send me your file list");
-            send(msg);
-
-            ACLMessage reply = receive();
-            if (reply != null) {
-                String fileListFromNextNode = reply.getContent();
-                // Update this node's file list based on the received file list from the next node
-                updateFileList(fileListFromNextNode);
-            }
-        }
-    }
-
-    private void updateFileList(String fileListFromNextNode) {
-        // Logic to update this node's file list based on the received file list from the next node
-        System.out.println("Updating file list based on received information from next node: " + fileListFromNextNode);
-    }
-
-    private void lockFile(String fileName) {
-        // Distributed file locking logic
-        // Example logic (replace with actual implementation):
-        boolean fileLocked = checkIfFileCanBeLocked(fileName);
-        if (fileLocked) {
-            System.out.println("File '" + fileName + "' locked successfully.");
-            // Perform operations on the locked file
-            // Example: Download the file or allow modifications
-        } else {
-            System.out.println("File '" + fileName + "' cannot be locked at the moment.");
-            // Handle the case where the file cannot be locked (e.g., display an error message)
-        }
-    }
-
-    private boolean checkIfFileCanBeLocked(String fileName) {
-        // Logic to check if the file can be locked
-        // Example: Check if the file is not already locked by another node
-        // You may need to maintain a list of locked files and their states across nodes
-        // For simplicity, assume the file can always be locked in this example
-        return true;
-    }
-
-    // Agent cleanup
-    protected void takeDown() {
-        // Clean up resources if needed
-    }
 
 
 
