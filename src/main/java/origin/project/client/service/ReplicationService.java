@@ -401,6 +401,7 @@ public class ReplicationService {
 
         // send files to owner-node
         for (String fileName : replicationMap.keySet()) {
+            // Set the
             // set transfer-endpoint
             InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
             sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());

@@ -2,7 +2,6 @@ package origin.project.client.controller;
 
 
 import com.google.gson.Gson;
-import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.client.Node;
-import origin.project.client.agents.FailureAgent;
 import origin.project.client.model.dto.FailureAgentTransfer;
 import origin.project.client.service.FailureService;
 import origin.project.client.service.MessageService;

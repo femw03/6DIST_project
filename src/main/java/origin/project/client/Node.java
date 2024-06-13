@@ -9,6 +9,7 @@ import jade.wrapper.StaleProxyException;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import origin.project.client.agents.FailureAgent;
@@ -68,8 +69,9 @@ public class Node {
 
     private AgentContainer mainContainer;
 
+
     @PostConstruct
-    public void init() throws StaleProxyException {
+    public void init() {
         // create the main-container.
         // This is the central container responsible for managing agents and other containers.
         Runtime rt = Runtime.instance();
@@ -79,7 +81,9 @@ public class Node {
         Profile profile = new ProfileImpl(serverIP, 4242, "SystemY");
         profile.setParameter(Profile.CONTAINER_NAME, "Container"+currentID);
         mainContainer = rt.createAgentContainer(profile);
+    }
 
+    public void startAgents(ReplicationService replicationService) throws StaleProxyException {
         // create a SyncAgent in the container.
         Object[] objtab = new Object[] {this, replicationService};
         AgentController controller = mainContainer.createNewAgent("syncAgent"+currentID, SyncAgent.class.getName(), objtab);
