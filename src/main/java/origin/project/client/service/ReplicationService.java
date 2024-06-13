@@ -2,6 +2,7 @@ package origin.project.client.service;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import jade.wrapper.StaleProxyException;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,14 +61,14 @@ public class ReplicationService {
             }
             try {
                 actualInit();
-            } catch (UnknownHostException e) {
+            } catch (UnknownHostException | StaleProxyException e) {
                 throw new RuntimeException(e);
             }
         }).start();
 
     }
 
-    public void actualInit() throws UnknownHostException{
+    public void actualInit() throws UnknownHostException, StaleProxyException {
         // allows for local testing
 //        System.out.println(node.getNamingServerIp());
 //        if (node.getNamingServerIp() == null) {
@@ -84,6 +85,13 @@ public class ReplicationService {
         System.out.println("replicated path: " + node.getREPLICATED_FILES_PATH());
         // verify local files and send hash-values to naming server
         startUp();
+        new Thread(() -> {
+            try {
+                node.startAgents(this);
+            } catch (StaleProxyException e) {
+                throw new RuntimeException(e);
+            }
+        }).start(); // pass replicationService to Agent to update fileList.
 
         // start update thread
         updateThreadRunning = true;

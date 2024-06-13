@@ -14,10 +14,13 @@ import org.springframework.stereotype.Component;
 import origin.project.client.agents.FailureAgent;
 import origin.project.client.agents.SyncAgent;
 import origin.project.client.model.dto.LogEntry;
+import origin.project.client.service.ReplicationService;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 @Getter
@@ -59,6 +62,8 @@ public class Node {
     private boolean newNode = false;
     private Map<String, LogEntry> log;
 
+    private ConcurrentHashMap<String, Boolean> nodeFileMap;
+
     Logger logger = Logger.getLogger(Node.class.getName());
 
     private AgentContainer mainContainer;
@@ -68,14 +73,20 @@ public class Node {
         // create the main-container.
         // This is the central container responsible for managing agents and other containers.
         Runtime rt = Runtime.instance();
-        Profile profile = new ProfileImpl();
-        mainContainer = rt.createMainContainer(profile);
+        String serverIP = namingServerIp.toString();
+        serverIP = serverIP.replace("/", "");
+        logger.info(serverIP);
+        Profile profile = new ProfileImpl(serverIP, 4242, "SystemY");
+        profile.setParameter(Profile.CONTAINER_NAME, "Container"+currentID);
+        mainContainer = rt.createAgentContainer(profile);
+
         // create a SyncAgent in the container.
-        AgentController controller = mainContainer.createNewAgent(nodeName + "sync agent", SyncAgent.class.getName(), new Object[] {this});
+        Object[] objtab = new Object[] {this, replicationService};
+        AgentController controller = mainContainer.createNewAgent("syncAgent"+currentID, SyncAgent.class.getName(), objtab);
+
         // start the SyncAgent.
         controller.start();
     }
-
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);
     }
