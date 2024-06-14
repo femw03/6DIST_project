@@ -361,7 +361,7 @@ public class ReplicationService {
 
     public void resolveFilesDuringFailure(String failingNodeIP) throws IOException {
         // resolve the local files that were replicated in the failing node.
-        resolveLocalFilesDuringfailure(failingNodeIP);
+        resolveLocalFilesDuringfailure();
         // resolve the replicated files that were local files of the failing node.
         resolveReplicatedFilesDuringfailure(failingNodeIP);
     }
@@ -386,7 +386,7 @@ public class ReplicationService {
         }
     }
 
-    private void resolveLocalFilesDuringfailure(String failingNodeIP) throws UnknownHostException {
+    private void resolveLocalFilesDuringfailure() throws UnknownHostException {
         logger.info("Resolving local files that were replicated in the failing node.");
         // get the current local files
         currentLocalFiles = fileService.scanFolder(localFileFolder, localFileFolder.toPath());

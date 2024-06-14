@@ -3,20 +3,14 @@ package origin.project.client.agents;
 import com.google.gson.Gson;
 import jade.core.Agent;
 import jade.core.behaviours.*;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import origin.project.client.Node;
 import origin.project.client.model.dto.FailureAgentTransfer;
-import origin.project.client.model.dto.LogEntry;
 import origin.project.client.service.MessageService;
 import origin.project.client.service.ReplicationService;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public class FailureAgent extends Agent {
@@ -116,7 +110,7 @@ public class FailureAgent extends Agent {
         String failureAgentTransferUrl = "http:/" + targetIP + ":8080/failure-agent/run-failure-agent";
 
 
-        // create the failureAgenTransfer-object and serialize
+        // create the failureAgentTransfer-object and serialize
         Gson gson = new Gson();
         FailureAgentTransfer failureAgentTransfer = new FailureAgentTransfer(IPFailingNode, IDStartingNode);
         String failureAgentTransferJson = gson.toJson(failureAgentTransfer);

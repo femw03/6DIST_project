@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
 import origin.project.client.agents.FailureAgent;
-import origin.project.client.agents.SyncAgent;
 
 import java.net.UnknownHostException;
 import java.util.Objects;
@@ -93,7 +92,8 @@ public class FailureService {
     public void startFailureAgent(String IPadress, int startID) throws StaleProxyException {
         // create a FailureAgent in the container.
         String agentName = node.getNodeName() + " FailureAgent(" + IPadress + ", " + startID + ")";
-        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), new Object[] {IPadress, startID, node, messageService, replicationService});
+        Object[] objects = new Object[] {IPadress, startID, node, messageService, replicationService};
+        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), objects);
         // start the FailureAgent.
         controller.start();
     }
