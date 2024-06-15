@@ -3,6 +3,7 @@ package origin.project.client;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 import origin.project.client.model.dto.LogEntry;
 
@@ -34,12 +35,12 @@ public class Node {
     private String nodeName;
     @Value("${ipAddress}")
     private String ipAddress;
-
     @Value("${localfiles.path}")
     private String LOCAL_FILES_PATH;
-
     @Value("${replicatedfiles.path}")
     private String REPLICATED_FILES_PATH;
+    /*@Value("ctx")
+    private ConfigurableApplicationContext ctx;*/
 
     private int currentID;
     private int nextID=-1;
@@ -48,7 +49,6 @@ public class Node {
     private int existingNodes=0;
     private boolean pingEnable=false;
     private boolean newNode = false;
-    private Map<String, LogEntry> log;
 
     public InetAddress getIpAddress() throws UnknownHostException {
         return InetAddress.getByName(ipAddress);

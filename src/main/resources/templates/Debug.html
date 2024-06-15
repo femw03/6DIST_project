@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fetch Test</title>
+</head>
+<body>
+<button onclick="testFetch()">Test Fetch</button>
+<div id="debugResponse"></div>
+
+<script>
+  // Include your testFetch function here
+  async function testFetch() {
+    try {
+      document.getElementById('debugResponse').textContent = `Entered Test fetch`;
+      const response = await fetch('http://localhost:8080/naming-server/all-nodes');
+      //const response = await fetch('http://127.0.0.1:8000');
+
+      // Check if the response is OK
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(data);
+
+      // Display the data in the debug element
+      document.getElementById('debugResponse').textContent = `Test fetch success: ${JSON.stringify(data)}`;
+    } catch (error) {
+      console.error('Error:', error);
+      document.getElementById('debugResponse').textContent = `Test fetch error: ${error.message}`;
+    }
+  }
+</script>
+</body>
+</html>

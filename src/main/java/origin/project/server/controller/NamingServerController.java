@@ -6,20 +6,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
 import origin.project.server.service.JsonService;
+import origin.project.server.service.MessageService;
 import origin.project.server.service.NamingService;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.logging.Logger;
+import org.springframework.web.bind.annotation.GetMapping;
 
 
 @Getter
@@ -42,6 +43,8 @@ public class NamingServerController {
     private String FILE_PATH;
     @Value("${naming.server.directory}")
     private String DIRECTORY;
+    @Value("${node.port}")
+    private int nodePort;
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
@@ -131,7 +134,6 @@ public class NamingServerController {
         return optionalEntry;
     }
 
-
     @GetMapping("/get-IP-by-hash/{hashValue}")
     public InetAddress getIP(@PathVariable("hashValue") int hashValue) {
         //logger.info("GET: /get-IP-by-hash/"+ hashValue);
@@ -166,7 +168,7 @@ public class NamingServerController {
         return optionalEntry;
     }
 
-    @GetMapping("/get-node/{ip}")
+    @GetMapping("/get-node/{ip}") //doesn't seem to work?
     public boolean getNode(@PathVariable("ip") String ip) throws UnknownHostException {
         logger.info("GET: /get-node/"+ ip);
         boolean inRepository = false;
@@ -180,24 +182,17 @@ public class NamingServerController {
     @GetMapping("/file-location/{file-name}")
     public InetAddress getFileLocation(@PathVariable("file-name") String fileName) {
         logger.info("GET /file-location/" + fileName);
-
         if (namingRepository.count() < 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No nodes available in the system.");
         }
         if (fileName == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ERROR: name cannot be null.");
         }
-
         fileName = fileName.replace("\"", "");
-
         int fileHash = namingService.hashingFunction(fileName);
-
         InetAddress ownerNode = namingService.findOwner(fileHash);
-
         logger.info(fileName + " gave file-hash " + fileHash + " and returned " + ownerNode);
-
         return ownerNode;
-
     }
 
     @DeleteMapping("/clear")
@@ -217,5 +212,17 @@ public class NamingServerController {
         return namingService.hashingFunction(name);
     }
 
+    @GetMapping("/get-nodecount")
+    public long getNodeCount() {
+        logger.info("GET /get-nodecount");
+        return namingRepository.count();
+    }
+
+    @GetMapping("/get-IP-server")
+    public String getIPServer() throws UnknownHostException {
+        logger.info("GET /get-IP-server");
+        InetAddress localHost = InetAddress.getLocalHost();
+        return localHost.getHostAddress();
+    }
 
 }

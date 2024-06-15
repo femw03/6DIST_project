@@ -1,12 +1,9 @@
-/*package origin.project.client.agents;
-
+package origin.project.client.agents;
 
 import jade.core.AID;
 import jade.core.Agent;
-import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
@@ -18,7 +15,6 @@ import java.util.List;
 public class SyncAgent extends Agent {
     @Autowired
     private Node node;
-
     private List<String> fileList;
     private String nextNodeAgent;
 
@@ -98,7 +94,4 @@ public class SyncAgent extends Agent {
         // Clean up resources if needed
     }
 
-
-
 }
-*/
