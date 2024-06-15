@@ -2,24 +2,15 @@ package origin.project.server.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jcraft.jsch.ChannelExec;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.repository.NamingRepository;
 import origin.project.server.service.MessageService;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.logging.Logger;
@@ -28,14 +19,14 @@ import java.util.logging.Logger;
 @Setter
 @RestController
 @RequestMapping("/gui")
-public class CallsGui {
+public class GUIController {
     @Autowired
     private NamingRepository namingRepository;
     @Autowired
     private MessageService messageService;
     @Autowired
     private NamingServerController namingServerController;
-    Logger logger = Logger.getLogger(NamingServerController.class.getName());
+    Logger logger = Logger.getLogger(GUIController.class.getName());
 
     @GetMapping("/get-nodeLocalFiles/{hashID}")
     public Iterable<String> getNodeLocalFiles(@PathVariable("hashID") int hashID) {

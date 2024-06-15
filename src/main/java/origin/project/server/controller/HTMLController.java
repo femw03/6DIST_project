@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Setter
 @Controller
 @RequestMapping("/")
-public class GuiController {
+public class HTMLController {
     @GetMapping("/")
     public String dashboard(Model model) {
         // Add necessary data to the model

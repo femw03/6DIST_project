@@ -116,11 +116,26 @@ public class ReplicationService {
         }
     }
 
+    public void sendLocalFilesToNewNode() throws UnknownHostException {
+        // request replication locations from namingserver
+        Map<String, String> replicationMap = requestFileLocation(new ArrayList<>(currentLocalFiles));
+
+        for (String fileName : currentLocalFiles) {
+            InetAddress newLocation = InetAddress.getByName(replicationMap.get(fileName));
+            if (!newLocation.equals(node.getIpAddress())) {
+                // set transfer-endpoint
+                InetAddress targetIP = newLocation;
+                sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
+            }
+        }
+    }
+
     public void updateThread() throws UnknownHostException {
         while(updateThreadRunning) {
             if (node.isNewNode()) {
                 logger.info("New node added to network, start update phase of replication");
                 sendReplicatedFilesToNewNode();
+                sendLocalFilesToNewNode();
                 node.setNewNode(false);
             }
             // check updates

@@ -306,21 +306,6 @@
       // Debug information
       console.log(`Fetched data: ${JSON.stringify(activeNodesCount)}`);
 
-
-      // Implements function to fill in all info about the nodes template, see below! Not sure how yet...
-      /*One node looks like this:
-      * {
-      name: 'Node 1',
-      id: '123456',
-      ip: '192.168.1.101',
-      prevId: '654321',
-      nextId: '789012',
-      status: 'Active',
-      localFiles: ['file1.txt', 'file2.txt', 'file3.txt'], // Example local files
-      replicatedFiles: ['file4.txt', 'file5.txt'], // Example replicated files
-      }
-      * */
-
       // getting node info
       const endpointAllNodeInfo = 'http://localhost:8080/naming-server/all-nodes';
       const nodeInfo = await getRequest(endpointAllNodeInfo);
@@ -721,7 +706,6 @@
     var colorThemeSelect = document.getElementById('colorThemeSelect');
     colorThemeSelect.value = 'white'; // Set dropdown value
     handleColorThemeChange(); // Apply selected theme
-    //fetchRemoteData();
   }
 
   // Function to update the number of active nodes in the Naming Server block
@@ -750,9 +734,6 @@
       showNodeDetails(node);
       updateActiveNodesCount();
     }
-    else {
-        //node already exists!
-    }
   }
 
   // Function to terminate a node
@@ -765,10 +746,6 @@
         postRequest(endPoint,"kill node","");
         nodeDetails = {};
         showNodeDetails(null);
-        /*fetchRemoteData();
-        populateNodes(); // Update the GUI
-        populateNodesTab();
-        updateActiveNodesCount();*/
       }
     }
   }
@@ -833,26 +810,10 @@
     console.log('Inputs cleared');
   }
 
-
-
   // Function to fetch remote data every 1 seconds
-  function fetchDataPeriodically() {
-    // Call fetchRemoteData immediately
-    fetchRemoteData();
-    calculateFileCounts();
-    populateNodes();
-    showNodeDetails();
-    populateNodesTab();
-    displayFilesTab();
-
-    // Call fetchRemoteData every second (1000 milliseconds)
-    setInterval(fetchRemoteData, 1000);
-  }
-
   // Initial population of nodes when the page loads
   document.addEventListener('DOMContentLoaded', function() {
     // Call the function to start fetching data periodically
-    //fetchDataPeriodically();
     fetchRemoteData();
     calculateFileCounts();
     initializeColorTheme(); // Initialize color theme
