@@ -6,14 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import origin.project.server.model.naming.NamingEntry;
 import origin.project.server.model.naming.dto.NodeRequest;
 import origin.project.server.repository.NamingRepository;
-import origin.project.server.service.JsonService;
-import origin.project.server.service.MessageService;
+import origin.project.server.service.JsonServiceNaming;
 import origin.project.server.service.NamingService;
 
 import java.net.InetAddress;
@@ -33,7 +31,7 @@ public class NamingServerController {
     @Autowired
     private NamingService namingService;
     @Autowired
-    private JsonService jsonService;
+    private JsonServiceNaming jsonService;
 
     @Value("${multicast.port}")
     private int multicastPort;
@@ -48,7 +46,7 @@ public class NamingServerController {
 
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
-    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonService jsonService) {
+    public NamingServerController(NamingRepository namingRepository, NamingService namingService, JsonServiceNaming jsonService) {
         this.namingRepository = namingRepository;
         this.namingService = namingService;
         this.jsonService = jsonService;

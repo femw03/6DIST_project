@@ -59,7 +59,7 @@ public class ReplicationService {
 
     }
 
-    public void actualInit() throws UnknownHostException{
+    public void actualInit() throws UnknownHostException, StaleProxyException{
         localFileFolder = new File(node.getLOCAL_FILES_PATH());
         // set folder path for data-files (e.g., /data/)
         //currentLocalFiles = new ArrayList<>();

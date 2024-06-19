@@ -268,4 +268,3 @@ public class SyncAgent extends Agent {
 
 
 }
-*/
