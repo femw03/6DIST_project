@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 @Service
-public class JsonService {
+public class JsonServiceNaming {
     Logger logger = Logger.getLogger(NamingServerController.class.getName());
 
     // reads json-file of objects into an array which is then cast to a list.

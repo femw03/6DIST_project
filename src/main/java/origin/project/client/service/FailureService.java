@@ -1,8 +1,11 @@
 package origin.project.client.service;
 
+import jade.wrapper.AgentController;
+import jade.wrapper.StaleProxyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import origin.project.client.Node;
+import origin.project.client.agents.FailureAgent;
 
 import java.net.UnknownHostException;
 import java.util.Objects;
@@ -10,6 +13,8 @@ import java.util.logging.Logger;
 
 @Service
 public class FailureService {
+    @Autowired
+    private ReplicationService replicationService;
     @Autowired
     private MessageService messageService;
     @Autowired
@@ -25,6 +30,9 @@ public class FailureService {
         String URLnext = node.getNamingServerUrl() + "/get-IP-by-hash/" + nextID;
         String IPnext = messageService.getRequest(URLnext, "get next ip");
         IPnext = IPnext.replace("\"", "");              // remove double quotes
+
+        // activate the Failure agent in the node before the failed node (this way only one failure agent gets activated per failed node)
+        boolean executeFailureAgent = IPnext.equals(IPaddress);
 
         // previous
         String URLprevious = node.getNamingServerUrl() + "/get-IP-by-hash/" + previousID;
@@ -70,7 +78,23 @@ public class FailureService {
             logger.info("Node "+IPaddress+" already removed");
         }
 
-
+        // Start the FailureAgent
+        try {
+            if (executeFailureAgent) {
+                startFailureAgent(IPaddress, node.getCurrentID());
+            }
+        } catch (StaleProxyException e) {
+            e.printStackTrace();
+        }
     }
 
+
+    public void startFailureAgent(String IPadress, int startID) throws StaleProxyException {
+        // create a FailureAgent in the container.
+        String agentName = node.getNodeName() + " FailureAgent(" + IPadress + ", " + startID + ")";
+        Object[] objects = new Object[] {IPadress, startID, node, messageService, replicationService};
+        AgentController controller = node.getMainContainer().createNewAgent(agentName, FailureAgent.class.getName(), objects);
+        // start the FailureAgent.
+        controller.start();
+    }
 }

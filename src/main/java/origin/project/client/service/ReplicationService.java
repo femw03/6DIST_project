@@ -2,6 +2,7 @@ package origin.project.client.service;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import jade.wrapper.StaleProxyException;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import origin.project.client.model.dto.LogEntry;
 import origin.project.client.repository.LogRepository;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -50,7 +52,7 @@ public class ReplicationService {
             }
             try {
                 actualInit();
-            } catch (UnknownHostException e) {
+            } catch (UnknownHostException | StaleProxyException e) {
                 throw new RuntimeException(e);
             }
         }).start();
@@ -59,10 +61,20 @@ public class ReplicationService {
 
     public void actualInit() throws UnknownHostException{
         localFileFolder = new File(node.getLOCAL_FILES_PATH());
+        // set folder path for data-files (e.g., /data/)
+        //currentLocalFiles = new ArrayList<>();
+
         replicationBaseUrl = "http:/"+node.getNamingServerIp()+":"+node.getNamingServerPort()+"/replication";
 
         // verify local files and send hash-values to naming server
         startUp();
+        new Thread(() -> {
+            try {
+                node.startAgents(this);
+            } catch (StaleProxyException e) {
+                throw new RuntimeException(e);
+            }
+        }).start(); // pass replicationService to Agent to update fileList.
 
         // start update thread
         updateThreadRunning = true;
@@ -133,7 +145,7 @@ public class ReplicationService {
     public void updateThread() throws UnknownHostException {
         while(updateThreadRunning) {
             if (node.isNewNode()) {
-                logger.info("New node added to network, start update phase of replication");
+                logger.info("New node detected in Update-thread.");
                 sendReplicatedFilesToNewNode();
                 sendLocalFilesToNewNode();
                 node.setNewNode(false);
@@ -325,4 +337,52 @@ public class ReplicationService {
         }
     }
 
+    public void resolveFilesDuringFailure(String failingNodeIP) throws IOException {
+        // resolve the local files that were replicated in the failing node.
+        resolveLocalFilesDuringfailure();
+        // resolve the replicated files that were local files of the failing node.
+        resolveReplicatedFilesDuringfailure(failingNodeIP);
+    }
+
+    private void resolveReplicatedFilesDuringfailure(String failingNodeIP) throws IOException {
+        logger.info("Resolving replicated files that were owned by the failing node.");
+        // get filenames of replicated files that were local files from the failing node
+        for (LogEntry e : logRepository.findAll()) {
+            if (e.getDownloadLocationID().toString().equals("/" + failingNodeIP)) {
+                String fileName = e.getFileName();
+
+                logger.info("Moving file: " +fileName);
+                // move the file from the replicated folder to the local folder
+                // the update phase will replicate the file again
+                String sourceFile = node.getREPLICATED_FILES_PATH() + "/" + fileName;
+                String destinationFile = node.getLOCAL_FILES_PATH() + "/" + fileName;
+                fileService.moveFile(sourceFile, destinationFile);
+
+                // Remove the file from the log
+                logRepository.deleteByFileName(fileName);
+            }
+        }
+    }
+
+    private void resolveLocalFilesDuringfailure() throws UnknownHostException {
+        logger.info("Resolving local files that were replicated in the failing node.");
+        // get the current local files
+        currentLocalFiles = fileService.scanFolder(localFileFolder, localFileFolder.toPath());
+
+        // check if there are local files
+        if (!currentLocalFiles.isEmpty()) {
+            return;
+        }
+
+        // rereplicate all the local files
+        Map<String, String> replicationMap = requestFileLocation(currentLocalFiles);
+
+        // send files to owner-node
+        for (String fileName : replicationMap.keySet()) {
+            // Set the
+            // set transfer-endpoint
+            InetAddress targetIP = InetAddress.getByName(replicationMap.get(fileName));
+            sendFile(targetIP, fileName, node.getLOCAL_FILES_PATH(), node.getIpAddress());
+        }
+    }
 }

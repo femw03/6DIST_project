@@ -66,7 +66,7 @@ public class PingService {
 
     public void pingNode(InetAddress receiverIP) throws UnknownHostException, InterruptedException {
         try (Socket socket = new Socket()) {
-            //logger.info("Sending PING to "+receiverIP.getHostAddress());
+            logger.info("Sending PING to "+receiverIP.getHostAddress());
             socket.connect(new InetSocketAddress(receiverIP.getHostName(), node.getNodePort()), 30);
         } catch (IOException e) {
             // Connection failed, handle the exception or throw it further

@@ -6,8 +6,8 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class FileTransfer {
-    private String fileName;
-    private byte[] file;
-    private LogEntry logEntry;
+@ToString
+public class FailureAgentTransfer {
+    private String IPFailingNode;
+    private int IDStartingNode;
 }

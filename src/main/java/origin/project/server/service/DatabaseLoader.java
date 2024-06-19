@@ -18,7 +18,7 @@ public class DatabaseLoader {
     @Autowired
     private NamingRepository namingRepository;
     @Autowired
-    private JsonService jsonService;
+    private JsonServiceNaming jsonService;
     @Autowired
     private NamingServerController namingServerController;
 
@@ -27,7 +27,7 @@ public class DatabaseLoader {
     private static final Logger logger = Logger.getLogger(DatabaseLoader.class.getName());
 
 
-    public DatabaseLoader(NamingRepository namingRepository, JsonService jsonService, NamingServerController namingServerController) {
+    public DatabaseLoader(NamingRepository namingRepository, JsonServiceNaming jsonService, NamingServerController namingServerController) {
         this.namingRepository = namingRepository;
         this.jsonService = jsonService;
         this.namingServerController = namingServerController;
